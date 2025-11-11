@@ -1,6 +1,7 @@
+// app/index.tsx
+import { useRouter } from 'expo-router';
 import { useEffect } from 'react';
 import { ActivityIndicator, View } from 'react-native';
-import { useRouter } from 'expo-router';
 import { useAuth } from '../src/context/AuthContext';
 
 export default function Index() {
@@ -11,7 +12,7 @@ export default function Index() {
     if (loading) return;
 
     if (session) {
-      router.replace('/home');
+      router.replace('/(app)/feed');
     } else {
       router.replace('/login');
     }

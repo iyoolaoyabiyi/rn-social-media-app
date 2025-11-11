@@ -1,9 +1,9 @@
 import {
   createContext,
+  ReactNode,
   useContext,
   useEffect,
   useState,
-  ReactNode,
 } from 'react';
 import { supabase } from '../lib/supabase';
 
@@ -35,13 +35,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<import('@supabase/supabase-js').Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
 
-  useEffect(() => {
+    useEffect(() => {
     let isMounted = true;
 
-    async function init() {
-      setLoading(true);
-
-      // Get current session
+    async function getInitialSession() {
       const {
         data: { session },
       } = await supabase.auth.getSession();
@@ -54,27 +51,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         await loadProfile(session.user.id, isMounted);
       }
 
-      // Listen for auth changes
-      const {
-        data: { subscription },
-      } = supabase.auth.onAuthStateChange(async (_event, newSession) => {
-        if (!isMounted) return;
-
-        setSession(newSession ?? null);
-
-        if (newSession?.user) {
-          await loadProfile(newSession.user.id, isMounted);
-        } else {
-          setProfile(null);
-        }
-      });
-
       setLoading(false);
-
-      return () => {
-        isMounted = false;
-        subscription.unsubscribe();
-      };
     }
 
     async function loadProfile(userId: string, stillMounted: boolean) {
@@ -94,7 +71,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     }
 
-    init();
+    getInitialSession();
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async (_event, newSession) => {
+      if (!isMounted) return;
+
+      setSession(newSession ?? null);
+
+      if (newSession?.user) {
+        await loadProfile(newSession.user.id, isMounted);
+      } else {
+        setProfile(null);
+      }
+    });
+
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   async function signUp({
@@ -154,7 +150,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   async function signOut(): Promise<void> {
-    await supabase.auth.signOut();
+    const { error } = await supabase.auth.signOut({ scope: 'local' });
+
+    if (error && error.message !== 'Auth session missing!' && error.status !== 403) {
+      console.log('Sign out error:', error.message);
+    }
+
+    setSession(null);
     setProfile(null);
   }
 
