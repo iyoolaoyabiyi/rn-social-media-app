@@ -1,4 +1,5 @@
 import { AppContainer } from '@/src/components/AppContainer';
+import { Ionicons } from '@expo/vector-icons';
 import { Tabs, useRouter } from 'expo-router';
 import { useEffect } from 'react';
 import { ActivityIndicator, View } from 'react-native';
@@ -34,24 +35,47 @@ export default function AppTabsLayout() {
       <Tabs
         screenOptions={{
           headerShown: false,
+          tabBarActiveTintColor: '#111827',
+          tabBarInactiveTintColor: '#9CA3AF',
         }}
       >
         <Tabs.Screen
           name="feed"
           options={{
             title: 'Feed',
+            tabBarIcon: ({ color, size, focused }) => (
+              <Ionicons
+                name={focused ? 'home' : 'home-outline'}
+                size={size}
+                color={color}
+              />
+            ),
           }}
         />
         <Tabs.Screen
           name="create"
           options={{
             title: 'Create',
+            tabBarIcon: ({ color, size, focused }) => (
+              <Ionicons
+                name={focused ? 'add-circle' : 'add-circle-outline'}
+                size={size}
+                color={color}
+              />
+            ),
           }}
         />
         <Tabs.Screen
           name="profile"
           options={{
             title: 'Profile',
+            tabBarIcon: ({ color, size, focused }) => (
+              <Ionicons
+                name={focused ? 'person' : 'person-outline'}
+                size={size}
+                color={color}
+              />
+            ),
           }}
         />
       </Tabs>
