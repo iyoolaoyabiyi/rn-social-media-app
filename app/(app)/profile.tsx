@@ -1,4 +1,3 @@
-// app/(app)/profile.tsx
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
 import { AppContainer } from '../../src/components/AppContainer';

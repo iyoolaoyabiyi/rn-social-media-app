@@ -1,4 +1,4 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { View, Text, StyleSheet, Image } from 'react-native';
 import type { Post } from '../types';
 
 type Props = {
@@ -23,7 +23,17 @@ export function PostCard({ post }: Props) {
         </View>
       </View>
 
-      <Text style={styles.content}>{post.content}</Text>
+      {post.content ? (
+        <Text style={styles.content}>{post.content}</Text>
+      ) : null}
+
+      {post.image_url ? (
+        <Image
+          source={{ uri: post.image_url }}
+          style={styles.image}
+          resizeMode="cover"
+        />
+      ) : null}
 
       <Text style={styles.meta}>{timestamp}</Text>
     </View>
@@ -66,6 +76,12 @@ const styles = StyleSheet.create({
   content: {
     fontSize: 14,
     color: '#111827',
+  },
+  image: {
+    width: '100%',
+    height: 220,
+    borderRadius: 10,
+    backgroundColor: '#F3F4F6',
   },
   meta: {
     fontSize: 10,
