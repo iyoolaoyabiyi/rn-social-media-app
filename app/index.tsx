@@ -1,51 +1,31 @@
-import { supabase } from '@/src/lib/supabase';
-import { useEffect, useState } from 'react';
-import { ActivityIndicator, Text } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useEffect } from 'react';
+import { ActivityIndicator, View } from 'react-native';
+import { useRouter } from 'expo-router';
+import { useAuth } from '../src/context/AuthContext';
 
-export default function App() {
-  const [ok, setOk] = useState<boolean | null>(null);
-  const [message, setMessage] = useState<string>('');
+export default function Index() {
+  const { loading, session } = useAuth();
+  const router = useRouter();
 
   useEffect(() => {
-    async function testConnection() {
-      try {
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('id')
-          .limit(1);
+    if (loading) return;
 
-        if (error) {
-          setOk(false);
-          setMessage(error.message);
-        } else {
-          setOk(true);
-          setMessage('Supabase connected. Schema reachable.');
-        }
-      } catch (err: any) {
-        setOk(false);
-        setMessage(err?.message || 'Unknown error');
-      }
+    if (session) {
+      router.replace('/home');
+    } else {
+      router.replace('/login');
     }
-
-    testConnection();
-  }, []);
+  }, [loading, session, router]);
 
   return (
-    <SafeAreaView
+    <View
       style={{
         flex: 1,
         alignItems: 'center',
         justifyContent: 'center',
       }}
     >
-      {ok === null && <ActivityIndicator />}
-      {ok === true && <Text>{message}</Text>}
-      {ok === false && (
-        <Text style={{ color: 'red', padding: 16, textAlign: 'center' }}>
-          Supabase connection failed: {message}
-        </Text>
-      )}
-    </SafeAreaView>
+      <ActivityIndicator />
+    </View>
   );
 }

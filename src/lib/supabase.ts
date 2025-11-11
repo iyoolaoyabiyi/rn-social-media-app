@@ -1,8 +1,7 @@
-// src/lib/supabase.ts
-import { AppState, Platform } from 'react-native';
-import 'react-native-url-polyfill/auto';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import { AppState, Platform } from 'react-native';
+import 'react-native-url-polyfill/auto';
 
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL as string;
 const supabaseKey = process.env.EXPO_PUBLIC_SUPABASE_KEY as string;
