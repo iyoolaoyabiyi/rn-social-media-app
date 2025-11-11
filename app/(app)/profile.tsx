@@ -1,37 +1,91 @@
-import { Pressable, Text, View } from 'react-native';
+// app/(app)/profile.tsx
+import { useEffect, useState } from 'react';
+import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
 import { AppContainer } from '../../src/components/AppContainer';
+import { PostCard } from '../../src/components/PostCard';
 import { useAuth } from '../../src/context/AuthContext';
+import { supabase } from '../../src/lib/supabase';
+import type { Post } from '../../src/types';
 
 export default function ProfileScreen() {
   const { profile, session, signOut } = useAuth();
+  const [posts, setPosts] = useState<Post[] | null>(null);
+  const [loadingPosts, setLoadingPosts] = useState(true);
 
-  if (!session) {
-    // In practice, the parent layout already guards this.
+  useEffect(() => {
+    if (!session || !profile) return;
+
+    async function load() {
+      setLoadingPosts(true);
+
+      const { data, error } = await supabase
+        .from('posts')
+        .select(
+          `
+          id,
+          content,
+          image_url,
+          created_at,
+          user_id,
+          profiles (
+            username,
+            display_name,
+            avatar_url
+          )
+        `
+        )
+        .eq('user_id', profile?.id)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.log('Error loading user posts:', error.message);
+        setPosts([]);
+      } else {
+        const mapped: Post[] = (data || []).map((row: any) => ({
+          id: row.id,
+          content: row.content,
+          image_url: row.image_url,
+          created_at: row.created_at,
+          user_id: row.user_id,
+          author: {
+            username: row.profiles?.username ?? 'unknown',
+            display_name: row.profiles?.display_name ?? null,
+            avatar_url: row.profiles?.avatar_url ?? null,
+          },
+        }));
+        setPosts(mapped);
+      }
+
+      setLoadingPosts(false);
+    }
+
+    load();
+  }, [session, profile]);
+
+  if (!session || !profile) {
     return null;
   }
 
   return (
     <AppContainer>
-      <View style={{ padding: 24, gap: 12 }}>
-        <Text style={{ fontSize: 22, fontWeight: '600' }}>
-          Profile
-        </Text>
-
-        <Text>
-          Username: {profile?.username}
-        </Text>
-
-        {profile?.display_name ? (
-          <Text>
-            Display name: {profile.display_name}
+      <ScrollView
+        contentContainerStyle={{ padding: 24, paddingBottom: 40, gap: 16 }}
+        keyboardShouldPersistTaps="handled"
+      >
+        <View style={{ gap: 6 }}>
+          <Text style={{ fontSize: 22, fontWeight: '600' }}>
+            {profile.display_name || profile.username}
           </Text>
-        ) : null}
+          <Text style={{ color: '#6B7280' }}>
+            @{profile.username}
+          </Text>
+        </View>
 
-        <View style={{ marginTop: 16 }}>
-          <Text style={{ fontSize: 16, fontWeight: '500', marginBottom: 4 }}>
+        <View style={{ marginTop: 8 }}>
+          <Text style={{ fontSize: 14, fontWeight: '500', marginBottom: 4 }}>
             Account (private)
           </Text>
-          <Text style={{ fontSize: 14 }}>
+          <Text style={{ fontSize: 13, color: '#4B5563' }}>
             Email: {session.user.email}
           </Text>
         </View>
@@ -39,19 +93,47 @@ export default function ProfileScreen() {
         <Pressable
           onPress={signOut}
           style={{
-            marginTop: 24,
+            marginTop: 12,
             paddingVertical: 10,
             paddingHorizontal: 16,
             borderRadius: 8,
             backgroundColor: '#111827',
             alignItems: 'center',
+            alignSelf: 'flex-start',
           }}
         >
           <Text style={{ color: '#fff' }}>
             Sign out
           </Text>
         </Pressable>
-      </View>
+
+        <View style={{ marginTop: 16 }}>
+          <Text
+            style={{
+              fontSize: 16,
+              fontWeight: '600',
+              marginBottom: 8,
+            }}
+          >
+            Your posts
+          </Text>
+
+          {loadingPosts && (
+            <ActivityIndicator style={{ marginTop: 8 }} />
+          )}
+
+          {posts && posts.length === 0 && !loadingPosts && (
+            <Text style={{ color: '#6B7280' }}>
+              You have not posted anything yet.
+            </Text>
+          )}
+
+          {posts &&
+            posts.map((post) => (
+              <PostCard key={post.id} post={post} />
+            ))}
+        </View>
+      </ScrollView>
     </AppContainer>
   );
 }

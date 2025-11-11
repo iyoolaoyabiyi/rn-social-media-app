@@ -6,13 +6,7 @@ import {
   useState,
 } from 'react';
 import { supabase } from '../lib/supabase';
-
-type Profile = {
-  id: string;
-  username: string;
-  display_name: string | null;
-  avatar_url: string | null;
-};
+import { Profile } from '../types';
 
 type AuthContextType = {
   loading: boolean;
