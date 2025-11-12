@@ -150,7 +150,7 @@ export default function CreatePostScreen() {
 
     setContent('');
     setImageUri(null);
-    router.replace('/(app)/feed');
+    router.replace('/(tabs)/feed');
   }
 
   function clearImage() {

@@ -1,20 +1,24 @@
-import { View, Text, StyleSheet, Image } from 'react-native';
+import { Image, StyleSheet, Text, View } from 'react-native';
 import type { Post } from '../types';
 
-type Props = {
-  post: Post;
-};
+type Props = { post: Post };
 
 export function PostCard({ post }: Props) {
   const { author } = post;
-
   const created = new Date(post.created_at);
   const timestamp = created.toLocaleString();
 
   return (
     <View style={styles.card}>
       <View style={styles.header}>
-        <View style={styles.avatarStub} />
+        {author.avatar_url ? (
+          <Image
+            source={{ uri: author.avatar_url }}
+            style={styles.avatar}
+          />
+        ) : (
+          <View style={styles.avatarStub} />
+        )}
         <View style={styles.headerText}>
           <Text style={styles.username}>
             {author.display_name || author.username}
@@ -23,17 +27,15 @@ export function PostCard({ post }: Props) {
         </View>
       </View>
 
-      {post.content ? (
-        <Text style={styles.content}>{post.content}</Text>
-      ) : null}
+      <Text style={styles.content}>{post.content}</Text>
 
-      {post.image_url ? (
+      {post.image_url && (
         <Image
           source={{ uri: post.image_url }}
           style={styles.image}
           resizeMode="cover"
         />
-      ) : null}
+      )}
 
       <Text style={styles.meta}>{timestamp}</Text>
     </View>
@@ -47,7 +49,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     borderWidth: 1,
     borderColor: '#E5E7EB',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#fff',
     gap: 8,
   },
   header: {
@@ -55,10 +57,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
   },
+  avatar: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+  },
   avatarStub: {
     width: 32,
     height: 32,
-    borderRadius: 999,
+    borderRadius: 16,
     backgroundColor: '#E5E7EB',
   },
   headerText: {

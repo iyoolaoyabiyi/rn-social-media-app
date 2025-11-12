@@ -1,5 +1,14 @@
+import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Image,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { AppContainer } from '../../src/components/AppContainer';
 import { PostCard } from '../../src/components/PostCard';
 import { useAuth } from '../../src/context/AuthContext';
@@ -7,21 +16,20 @@ import { supabase } from '../../src/lib/supabase';
 import type { Post } from '../../src/types';
 
 export default function ProfileScreen() {
+  const router = useRouter();
   const { profile, session, signOut } = useAuth();
   const [posts, setPosts] = useState<Post[] | null>(null);
-  const [loadingPosts, setLoadingPosts] = useState(true);
+  const [loadingPosts, setLoadingPosts] = useState<boolean>(true);
 
   useEffect(() => {
-    if (!session || !profile) return;
+    if (!profile) return;
 
-    async function load() {
+    async function loadUserPosts() {
       setLoadingPosts(true);
-
       const { data, error } = await supabase
         .from('posts')
         .select(
-          `
-          id,
+          `id,
           content,
           image_url,
           created_at,
@@ -30,8 +38,7 @@ export default function ProfileScreen() {
             username,
             display_name,
             avatar_url
-          )
-        `
+          )`
         )
         .eq('user_id', profile?.id)
         .order('created_at', { ascending: false });
@@ -54,12 +61,11 @@ export default function ProfileScreen() {
         }));
         setPosts(mapped);
       }
-
       setLoadingPosts(false);
     }
 
-    load();
-  }, [session, profile]);
+    loadUserPosts();
+  }, [profile]);
 
   if (!session || !profile) {
     return null;
@@ -71,14 +77,16 @@ export default function ProfileScreen() {
         contentContainerStyle={{ padding: 24, paddingBottom: 40, gap: 16 }}
         keyboardShouldPersistTaps="handled"
       >
-        <View style={{ gap: 6 }}>
-          <Text style={{ fontSize: 22, fontWeight: '600' }}>
-            {profile.display_name || profile.username}
-          </Text>
-          <Text style={{ color: '#6B7280' }}>
-            @{profile.username}
-          </Text>
-        </View>
+        {profile.avatar_url && (
+          <Image
+            source={{ uri: profile.avatar_url }}
+            style={{ width: 80, height: 80, borderRadius: 40 }}
+          />
+        )}
+        <Text style={{ fontSize: 22, fontWeight: '600' }}>
+          {profile.display_name || profile.username}
+        </Text>
+        <Text style={{ color: '#6B7280' }}>@{profile.username}</Text>
 
         <View style={{ marginTop: 8 }}>
           <Text style={{ fontSize: 14, fontWeight: '500', marginBottom: 4 }}>
@@ -88,38 +96,36 @@ export default function ProfileScreen() {
             Email: {session.user.email}
           </Text>
         </View>
-
-        <Pressable
-          onPress={signOut}
-          style={{
-            marginTop: 12,
-            paddingVertical: 10,
-            paddingHorizontal: 16,
-            borderRadius: 8,
-            backgroundColor: '#111827',
-            alignItems: 'center',
-            alignSelf: 'flex-start',
-          }}
-        >
-          <Text style={{ color: '#fff' }}>
-            Sign out
-          </Text>
-        </Pressable>
+        <View style={{
+          flex: 1,
+          flexDirection: "row",
+          gap: 6
+        }}>
+          <Pressable 
+            onPress={() => router.push('/edit-profile')}
+            style={ styles.button }
+          >
+            <Text style={{ color: "#fff" }}>Edit profile</Text>
+          </Pressable>
+          <Pressable
+            onPress={signOut}
+            style={[
+              styles.button,
+              {
+                backgroundColor: "red"
+              }]
+            }
+          >
+            <Text style={{ color: '#fff' }}>Sign out</Text>
+          </Pressable>
+        </View>
 
         <View style={{ marginTop: 16 }}>
-          <Text
-            style={{
-              fontSize: 16,
-              fontWeight: '600',
-              marginBottom: 8,
-            }}
-          >
+          <Text style={{ fontSize: 16, fontWeight: '600', marginBottom: 8 }}>
             Your posts
           </Text>
 
-          {loadingPosts && (
-            <ActivityIndicator style={{ marginTop: 8 }} />
-          )}
+          {loadingPosts && <ActivityIndicator style={{ marginTop: 8 }} />}
 
           {posts && posts.length === 0 && !loadingPosts && (
             <Text style={{ color: '#6B7280' }}>
@@ -136,3 +142,15 @@ export default function ProfileScreen() {
     </AppContainer>
   );
 }
+
+const styles = StyleSheet.create({
+  button: {
+    marginTop: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    backgroundColor: '#111827',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+  }
+})

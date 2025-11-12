@@ -1,4 +1,5 @@
-import {
+import { Session } from '@supabase/supabase-js';
+import React, {
   createContext,
   ReactNode,
   useContext,
@@ -6,12 +7,12 @@ import {
   useState,
 } from 'react';
 import { supabase } from '../lib/supabase';
-import { Profile } from '../types';
+import type { Profile as ProfileType } from '../types';
 
 type AuthContextType = {
   loading: boolean;
-  session: import('@supabase/supabase-js').Session | null;
-  profile: Profile | null;
+  session: Session | null;
+  profile: ProfileType | null;
   signUp: (params: {
     email: string;
     password: string;
@@ -20,62 +21,61 @@ type AuthContextType = {
   }) => Promise<{ error: string | null }>;
   signIn: (email: string, password: string) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
+  setProfileReloadTrigger: React.Dispatch<React.SetStateAction<number>>;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [loading, setLoading] = useState(true);
-  const [session, setSession] = useState<import('@supabase/supabase-js').Session | null>(null);
-  const [profile, setProfile] = useState<Profile | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [session, setSession] = useState<Session | null>(null);
+  const [profile, setProfile] = useState<ProfileType | null>(null);
+  const [profileReloadTrigger, setProfileReloadTrigger] = useState<number>(0);
 
-    useEffect(() => {
+  useEffect(() => {
     let isMounted = true;
 
-    async function getInitialSession() {
+    async function loadSessionAndProfile() {
       const {
         data: { session },
       } = await supabase.auth.getSession();
 
       if (!isMounted) return;
-
       setSession(session);
 
       if (session?.user) {
-        await loadProfile(session.user.id, isMounted);
+        await fetchProfile(session.user.id);
       }
 
       setLoading(false);
     }
 
-    async function loadProfile(userId: string, stillMounted: boolean) {
+    async function fetchProfile(userId: string) {
       const { data, error } = await supabase
         .from('profiles')
         .select('id, username, display_name, avatar_url')
         .eq('id', userId)
         .single();
 
-      if (!stillMounted) return;
-
       if (error) {
-        console.log('Error loading profile:', error.message);
+        console.log('Error fetching profile:', error.message);
         setProfile(null);
       } else {
-        setProfile(data as Profile);
+        setProfile(data as ProfileType);
       }
     }
 
-    getInitialSession();
+    loadSessionAndProfile();
 
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (_event, newSession) => {
       if (!isMounted) return;
 
-      setSession(newSession ?? null);
+      setSession(newSession);
 
       if (newSession?.user) {
-        await loadProfile(newSession.user.id, isMounted);
+        await fetchProfile(newSession.user.id);
       } else {
         setProfile(null);
       }
@@ -85,7 +85,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       isMounted = false;
       subscription.unsubscribe();
     };
-  }, []);
+  }, [profileReloadTrigger]);
 
   async function signUp({
     email,
@@ -98,30 +98,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     username: string;
     displayName?: string;
   }): Promise<{ error: string | null }> {
-    // Basic client-side username check
     if (!/^[a-zA-Z0-9_]{3,20}$/.test(username)) {
       return { error: 'Invalid username format.' };
     }
 
-    const { data, error } = await supabase.auth.signUp({
+    const { error } = await supabase.auth.signUp({
       email,
       password,
       options: {
         data: {
           username,
-          display_name: displayName || null,
+          display_name: displayName ?? null,
         },
       },
     });
 
     if (error) {
       return { error: error.message };
-    }
-
-    // If email confirmation is disabled, profile will be created immediately by trigger.
-    // If enabled, profile appears after confirmation.
-    if (data.user) {
-      // Profile will be loaded by the listener.
     }
 
     return { error: null };
@@ -145,18 +138,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   async function signOut(): Promise<void> {
     const { error } = await supabase.auth.signOut({ scope: 'local' });
-
-    if (error && error.message !== 'Auth session missing!' && error.status !== 403) {
+    if (error && error.status !== 403) {
       console.log('Sign out error:', error.message);
     }
-
     setSession(null);
     setProfile(null);
   }
 
   return (
     <AuthContext.Provider
-      value={{ loading, session, profile, signUp, signIn, signOut }}
+      value={{
+        loading,
+        session,
+        profile,
+        signUp,
+        signIn,
+        signOut,
+        setProfileReloadTrigger,
+      }}
     >
       {children}
     </AuthContext.Provider>
@@ -164,9 +163,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 }
 
 export function useAuth() {
-  const ctx = useContext(AuthContext);
-  if (!ctx) {
+  const context = useContext(AuthContext);
+  if (!context) {
     throw new Error('useAuth must be used within AuthProvider');
   }
-  return ctx;
+  return context;
 }
