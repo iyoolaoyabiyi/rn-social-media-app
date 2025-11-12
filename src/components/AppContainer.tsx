@@ -6,6 +6,7 @@ import {
   StyleSheet,
   View,
 } from 'react-native';
+import { theme } from '../theme';
 
 type Props = {
   children: ReactNode;
@@ -32,16 +33,19 @@ export function AppContainer({ children }: Props) {
 const styles = StyleSheet.create({
   safe: {
     flex: 1,
+    backgroundColor: theme.palette.background,
   },
   scrollContent: {
-    paddingTop: 12,
+    paddingTop: theme.spacing.md,
     flexGrow: 1,
     alignItems: 'center',
   },
   inner: {
     flexGrow: 1,
     width: '100%',
-    maxWidth: 640, // adjust if you like
+    maxWidth: 640,
     alignSelf: 'center',
+    paddingHorizontal: theme.spacing.sm,
+    paddingBottom: theme.spacing.xl,
   },
 });

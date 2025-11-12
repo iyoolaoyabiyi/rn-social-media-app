@@ -2,7 +2,9 @@ import { AppContainer } from '@/src/components/AppContainer';
 import { useAuth } from '@/src/context/AuthContext';
 import { useNotificationContext } from '@/src/context/NotificationContext';
 import { useRefresh } from '@/src/context/RefreshContext';
+import { Heading, Body, Caption } from '@/src/components/Typography';
 import { supabase } from '@/src/lib/supabase';
+import { theme } from '@/src/theme';
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
@@ -12,7 +14,6 @@ import {
   RefreshControl,
   ScrollView,
   StyleSheet,
-  Text,
   View,
 } from 'react-native';
 
@@ -185,14 +186,14 @@ export default function NotificationsScreen() {
   return (
     <AppContainer>
       <ScrollView
-        contentContainerStyle={{ padding: 24, paddingBottom: 40 }}
+        contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       >
         <View style={styles.headerRow}>
-          <Text style={styles.heading}>Notifications</Text>
+          <Heading>Notifications</Heading>
           <Pressable
             onPress={onRefresh}
             disabled={loading || refreshing}
@@ -202,22 +203,22 @@ export default function NotificationsScreen() {
               (loading || refreshing) && { opacity: 0.6 },
             ]}
           >
-            <Text style={styles.refreshText}>Refresh</Text>
+            <Caption style={styles.refreshText}>Refresh</Caption>
           </Pressable>
         </View>
 
         {loading && <ActivityIndicator style={{ marginTop: 16 }} />}
 
         {error && (
-          <Text style={{ color: 'red', marginTop: 12 }}>
+          <Body style={styles.errorText}>
             {error}
-          </Text>
+          </Body>
         )}
 
         {!loading && (!notifications || notifications.length === 0) && (
-          <Text style={{ color: '#6B7280', marginTop: 12 }}>
+          <Body style={styles.emptyText}>
             You&apos;re all caught up. No unread likes right now.
-          </Text>
+          </Body>
         )}
 
         {notifications &&
@@ -255,18 +256,18 @@ export default function NotificationsScreen() {
                 )}
 
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.cardText}>{summary}</Text>
-                  <Text style={styles.countText}>
+                  <Body style={styles.cardText}>{summary}</Body>
+                  <Caption style={styles.countText}>
                     [{sortedActors.length}] people liked your post
-                  </Text>
+                  </Caption>
                   {!!group.post_content && (
-                    <Text style={styles.postSnippet} numberOfLines={2}>
+                    <Caption style={styles.postSnippet} numberOfLines={2}>
                       “{group.post_content}”
-                    </Text>
+                    </Caption>
                   )}
-                  <Text style={styles.meta}>
+                  <Caption style={styles.meta}>
                     {new Date(group.latest_like).toLocaleString()}
-                  </Text>
+                  </Caption>
                 </View>
               </View>
             );
@@ -277,15 +278,15 @@ export default function NotificationsScreen() {
 }
 
 const styles = StyleSheet.create({
-  heading: {
-    fontSize: 20,
-    fontWeight: '600',
+  scrollContent: {
+    padding: theme.spacing.lg,
+    paddingBottom: theme.spacing.xl,
   },
   headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: 12,
+    gap: theme.spacing.md,
   },
   centered: {
     flex: 1,
@@ -293,25 +294,38 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   refreshBtn: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
+    paddingHorizontal: theme.spacing.sm,
+    paddingVertical: theme.spacing.xs,
+    borderRadius: theme.radii.sm,
     borderWidth: 1,
-    borderColor: '#D1D5DB',
+    borderColor: theme.palette.border,
   },
   refreshText: {
     fontSize: 13,
-    color: '#111827',
+    color: theme.palette.textMuted,
+  },
+  errorText: {
+    color: theme.palette.accent,
+    marginTop: theme.spacing.sm,
+  },
+  emptyText: {
+    color: theme.palette.textMuted,
+    marginTop: theme.spacing.sm,
   },
   card: {
-    marginTop: 16,
+    marginTop: theme.spacing.md,
     flexDirection: 'row',
-    gap: 12,
-    padding: 12,
-    borderRadius: 10,
+    gap: theme.spacing.sm,
+    padding: theme.spacing.md,
+    borderRadius: theme.radii.md,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
-    backgroundColor: '#fff',
+    borderColor: theme.palette.border,
+    backgroundColor: theme.palette.surface,
+    shadowColor: '#0f172a11',
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 1,
   },
   avatar: {
     width: 40,
@@ -322,26 +336,26 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#E5E7EB',
+    backgroundColor: theme.palette.border,
   },
   cardText: {
-    color: '#111827',
+    color: theme.palette.text,
     fontWeight: '600',
   },
   countText: {
     marginTop: 2,
     fontSize: 12,
-    color: '#4B5563',
+    color: theme.palette.textMuted,
   },
   postSnippet: {
     marginTop: 4,
     fontSize: 13,
-    color: '#4B5563',
+    color: theme.palette.textMuted,
     fontStyle: 'italic',
   },
   meta: {
     marginTop: 6,
     fontSize: 11,
-    color: '#9CA3AF',
+    color: theme.palette.textSubtle,
   },
 });

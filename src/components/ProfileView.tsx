@@ -1,7 +1,10 @@
-// src/components/ProfileView.tsx
-import { ActivityIndicator, Image, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
+import { theme } from '../theme';
 import type { Post } from '../types';
+import { Avatar } from './Avatar';
 import { PostCard } from './PostCard';
+import { SkeletonCard } from './SkeletonCard';
+import { Body, Caption, Heading } from './Typography';
 
 type BaseProfile = {
   id: string;
@@ -37,85 +40,70 @@ export function ProfileView({
 }: Props) {
   return (
     <ScrollView
-      contentContainerStyle={{ padding: 24, paddingBottom: 40, gap: 16 }}
+      contentContainerStyle={styles.container}
       keyboardShouldPersistTaps="handled"
       refreshControl={
-        onRefresh
-          ? (
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-          ) : undefined
+        onRefresh ? (
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        ) : undefined
       }
     >
-      {profile.avatar_url ? (
-        <Image source={{ uri: profile.avatar_url }} style={{ width: 80, height: 80, borderRadius: 40 }} />
-      ) : (
-        <View style={styles.avatarStub} />
-      )}
-
-      <Text style={{ fontSize: 22, fontWeight: '600' }}>
+      <Avatar uri={profile.avatar_url} size={84} name={profile.display_name || profile.username} />
+      <Heading style={styles.displayName}>
         {profile.display_name || profile.username}
-      </Text>
-      <Text style={{ color: '#6B7280' }}>@{profile.username}</Text>
+      </Heading>
+      <Caption>@{profile.username}</Caption>
 
       {isSelf && (
         <>
-          <View style={{ marginTop: 8 }}>
-            <Text style={{ fontSize: 14, fontWeight: '500', marginBottom: 4 }}>
-              Account (private)
-            </Text>
-            <Text style={{ fontSize: 13, color: '#4B5563' }}>
-              Email: {sessionEmail || '—'}
-            </Text>
+          <View style={styles.accountBox}>
+            <Heading style={styles.accountHeading}>Account (private)</Heading>
+            <Body style={styles.accountText}>Email: {sessionEmail || '—'}</Body>
           </View>
 
-          <View style={{ flexDirection: 'row', gap: 6 }}>
-            <Pressable onPress={onPressEdit} style={styles.button}>
-              <Text style={{ color: '#fff' }}>Edit profile</Text>
+          <View style={styles.actionRow}>
+            <Pressable onPress={onPressEdit} style={styles.primaryBtn}>
+              <Body style={styles.primaryBtnText}>Edit profile</Body>
             </Pressable>
-            <Pressable onPress={onPressSignOut} style={[styles.button, { backgroundColor: 'red' }]}>
-              <Text style={{ color: '#fff' }}>Sign out</Text>
+            <Pressable onPress={onPressSignOut} style={styles.secondaryBtn}>
+              <Body style={styles.secondaryBtnText}>Sign out</Body>
             </Pressable>
           </View>
         </>
       )}
 
-      <View style={{ marginTop: 16 }}>
-        <View
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            marginBottom: 8,
-            gap: 12,
-          }}
-        >
-          <Text style={{ fontSize: 16, fontWeight: '600' }}>
+      <View style={styles.postsSection}>
+        <View style={styles.postsHeader}>
+          <Heading style={styles.postsTitle}>
             {isSelf ? 'Your posts' : 'Posts'}
-          </Text>
+          </Heading>
           {onManualRefresh && (
             <Pressable
               onPress={onManualRefresh}
-              style={{
-                paddingHorizontal: 10,
-                paddingVertical: 6,
-                borderRadius: 8,
-                borderWidth: 1,
-                borderColor: '#D1D5DB',
-                opacity: refreshing ? 0.6 : 1,
-              }}
               disabled={refreshing}
+              style={({ pressed }) => [
+                styles.refreshBtn,
+                (pressed || refreshing) && { opacity: 0.6 },
+              ]}
             >
-              <Text style={{ fontSize: 12, color: '#111827' }}>Refresh</Text>
+              <Caption style={styles.refreshText}>Refresh</Caption>
             </Pressable>
           )}
         </View>
 
-        {loadingPosts && <ActivityIndicator style={{ marginTop: 8 }} />}
+        {loadingPosts && (
+          <>
+            <SkeletonCard />
+            <SkeletonCard />
+          </>
+        )}
 
         {posts && posts.length === 0 && !loadingPosts && (
-          <Text style={{ color: '#6B7280' }}>
-            {isSelf ? 'You have not posted anything yet.' : 'No posts yet.'}
-          </Text>
+          <Body style={styles.emptyText}>
+            {isSelf
+              ? 'You have not posted anything yet.'
+              : 'No posts yet.'}
+          </Body>
         )}
 
         {posts && posts.map((post) => <PostCard key={post.id} post={post} />)}
@@ -125,19 +113,82 @@ export function ProfileView({
 }
 
 const styles = StyleSheet.create({
-  button: {
-    marginTop: 12,
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    backgroundColor: '#111827',
-    alignItems: 'center',
-    alignSelf: 'flex-start',
+  container: {
+    padding: theme.spacing.sm,
+    paddingBottom: theme.spacing.xl,
+    gap: theme.spacing.sm,
   },
-  avatarStub: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: '#878c96ff',
+  displayName: {
+    fontSize: 24,
+  },
+  accountBox: {
+    marginTop: theme.spacing.sm,
+    padding: theme.spacing.md,
+    borderRadius: theme.radii.md,
+    backgroundColor: theme.palette.surface,
+    borderWidth: 1,
+    borderColor: theme.palette.border,
+  },
+  accountHeading: {
+    fontSize: 16,
+    marginBottom: theme.spacing.xs,
+  },
+  accountText: {
+    color: theme.palette.textMuted,
+  },
+  actionRow: {
+    flexDirection: 'row',
+    gap: theme.spacing.sm,
+    marginTop: theme.spacing.sm,
+  },
+  primaryBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: theme.spacing.sm,
+    paddingHorizontal: theme.spacing.lg,
+    borderRadius: theme.radii.pill,
+    backgroundColor: theme.palette.primary,
+  },
+  primaryBtnText: {
+    color: theme.palette.surface,
+    fontWeight: '600',
+  },
+  secondaryBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: theme.spacing.sm,
+    paddingHorizontal: theme.spacing.lg,
+    borderRadius: theme.radii.pill,
+    borderWidth: 1,
+    borderColor: theme.palette.border,
+  },
+  secondaryBtnText: {
+    color: theme.palette.accent,
+    fontWeight: '600',
+  },
+  postsSection: {
+    marginTop: theme.spacing.lg,
+  },
+  postsHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: theme.spacing.sm,
+  },
+  postsTitle: {
+    fontSize: 18,
+  },
+  refreshBtn: {
+    paddingHorizontal: theme.spacing.sm,
+    paddingVertical: theme.spacing.xs,
+    borderRadius: theme.radii.sm,
+    borderWidth: 1,
+    borderColor: theme.palette.border,
+  },
+  refreshText: {
+    color: theme.palette.textMuted,
+  },
+  emptyText: {
+    color: theme.palette.textMuted,
   },
 });

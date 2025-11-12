@@ -1,23 +1,29 @@
 import { Ionicons } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
+import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
+import Animated, { FadeInUp } from 'react-native-reanimated';
 import { useEffect, useState } from 'react';
 import {
   Alert,
-  Image,
   Modal,
   Platform,
   Pressable,
   ScrollView,
   StyleSheet,
-  Text,
   View,
 } from 'react-native';
 import { useAuth } from '../context/AuthContext';
 import { likePost, unlikePost } from '../lib/likes';
 import { supabase } from '../lib/supabase';
 import type { Post } from '../types';
+import { Avatar } from './Avatar';
+import { Body, Caption, Heading } from './Typography';
+import { theme } from '../theme';
 
 type Props = { post: Post };
+
+const imagePlaceholder = 'LKO2?U%2Tw=w]~RBVZRi};RPxuwH';
 
 export function PostCard({ post }: Props) {
   const router = useRouter();
@@ -90,6 +96,7 @@ export function PostCard({ post }: Props) {
         }
         return;
       }
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       setVisible(false);
     } catch (err) {
       if (Platform.OS === 'web') {
@@ -117,11 +124,10 @@ export function PostCard({ post }: Props) {
         ? await likePost(post.id, profile.id)
         : await unlikePost(post.id, profile.id);
 
-      if (error) {
-        throw new Error(error.message);
-      }
+      if (error) throw new Error(error.message);
+
+      await Haptics.selectionAsync();
     } catch (err) {
-      // Revert optimistic update on failure
       setLikedByMe(!nextLiked);
       setLikesCount((prev) => Math.max(0, prev + (nextLiked ? -1 : 1)));
       if (Platform.OS === 'web') {
@@ -135,7 +141,7 @@ export function PostCard({ post }: Props) {
   };
 
   return (
-    <View style={styles.card}>
+    <Animated.View entering={FadeInUp.springify(90)} style={styles.card}>
       <View style={styles.header}>
         <Pressable
           onPress={openAuthorProfile}
@@ -143,16 +149,16 @@ export function PostCard({ post }: Props) {
           accessibilityRole="button"
           accessibilityLabel={`Open ${author.display_name || author.username}'s profile`}
         >
-          {author.avatar_url ? (
-            <Image source={{ uri: author.avatar_url }} style={styles.avatar} />
-          ) : (
-            <View style={styles.avatarStub} />
-          )}
+          <Avatar
+            uri={author.avatar_url}
+            size={38}
+            name={author.display_name || author.username}
+          />
           <View style={styles.headerText}>
-            <Text style={styles.username}>
+            <Heading style={styles.username}>
               {author.display_name || author.username}
-            </Text>
-            <Text style={styles.handle}>@{author.username}</Text>
+            </Heading>
+            <Caption>@{author.username}</Caption>
           </View>
         </Pressable>
 
@@ -170,39 +176,40 @@ export function PostCard({ post }: Props) {
             <Ionicons
               name="trash-outline"
               size={18}
-              color={isDeleting ? '#9CA3AF' : '#EF4444'}
+              color={isDeleting ? theme.palette.textSubtle : theme.palette.accent}
             />
           </Pressable>
         )}
       </View>
 
-      <Text style={styles.content}>{post.content}</Text>
+      <Body style={styles.content}>{post.content}</Body>
 
       {post.image_url && (
         <Pressable
           onPress={() => setShowImage(true)}
-          style={({ pressed }) => [pressed && { opacity: 0.9 }]}
+          style={({ pressed }) => [styles.imageWrapper, pressed && { opacity: 0.9 }]}
           accessibilityRole="imagebutton"
           accessibilityLabel="Open image"
         >
           <Image
             source={{ uri: post.image_url }}
             style={styles.image}
-            resizeMode="cover"
+            contentFit="cover"
+            placeholder={imagePlaceholder}
+            transition={400}
           />
         </Pressable>
       )}
 
-      <Text style={styles.meta}>{timestamp}</Text>
+      <Caption>{timestamp}</Caption>
 
       <View style={styles.actionsRow}>
         <Pressable
           onPress={handleToggleLike}
           disabled={likeBusy || !profile?.id}
           style={({ pressed }) => [
-            styles.iconBtn,
             styles.likeButton,
-            (pressed || likeBusy) && { opacity: 0.6 },
+            (pressed || likeBusy) && { opacity: 0.65 },
           ]}
           accessibilityRole="button"
           accessibilityLabel={likedByMe ? 'Remove like' : 'Like post'}
@@ -210,13 +217,12 @@ export function PostCard({ post }: Props) {
           <Ionicons
             name={likedByMe ? 'heart' : 'heart-outline'}
             size={18}
-            color={likedByMe ? '#EF4444' : '#4B5563'}
+            color={likedByMe ? theme.palette.accent : theme.palette.textMuted}
           />
-          <Text style={styles.likeCount}>{likesCount}</Text>
+          <Body style={styles.likeCount}>{likesCount}</Body>
         </Pressable>
       </View>
 
-      {/* Full-screen image modal */}
       <Modal
         visible={showImage}
         transparent={false}
@@ -226,7 +232,6 @@ export function PostCard({ post }: Props) {
         onRequestClose={() => setShowImage(false)}
       >
         <View style={styles.modalRoot}>
-          {/* Close button */}
           <Pressable
             onPress={() => setShowImage(false)}
             style={({ pressed }) => [
@@ -238,14 +243,12 @@ export function PostCard({ post }: Props) {
             <Ionicons name="close" size={22} color="#fff" />
           </Pressable>
 
-          {/* Dark backdrop + centered image with zoom on iOS */}
           <Pressable
             style={styles.modalBackdrop}
             onPress={() => setShowImage(false)}
           >
             <ScrollView
               contentContainerStyle={styles.modalContent}
-              // Pinch-to-zoom works on iOS; ignored elsewhere gracefully
               minimumZoomScale={1}
               maximumZoomScale={4}
               bouncesZoom
@@ -254,28 +257,29 @@ export function PostCard({ post }: Props) {
               <Image
                 source={{ uri: post.image_url ?? '' }}
                 style={styles.modalImage}
-                resizeMode="contain"
-                // On web, allow right-click save/open in new tab
-                accessible
-                accessibilityLabel="Expanded post image"
+                contentFit="contain"
+                placeholder={imagePlaceholder}
               />
             </ScrollView>
           </Pressable>
         </View>
       </Modal>
-    </View>
+    </Animated.View>
   );
 }
 
 const styles = StyleSheet.create({
   card: {
-    marginBottom: 16,
-    padding: 12,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    backgroundColor: '#fff',
-    gap: 8,
+    marginBottom: theme.spacing.md,
+    padding: theme.spacing.md,
+    borderRadius: theme.radii.md,
+    backgroundColor: theme.palette.surface,
+    gap: theme.spacing.sm,
+    shadowColor: '#0f172a22',
+    shadowOpacity: 0.12,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 2,
   },
   header: {
     flexDirection: 'row',
@@ -285,54 +289,20 @@ const styles = StyleSheet.create({
   headerLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: theme.spacing.sm,
     flexShrink: 1,
-  },
-  avatar: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-  },
-  avatarStub: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#E5E7EB',
   },
   headerText: {
     flexDirection: 'column',
   },
   username: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#111827',
-  },
-  handle: {
-    fontSize: 12,
-    color: '#6B7280',
+    fontSize: 15,
   },
   content: {
-    fontSize: 14,
-    color: '#111827',
-  },
-  image: {
-    width: '100%',
-    height: 220,
-    borderRadius: 10,
-    backgroundColor: '#F3F4F6',
-    objectFit: 'cover',
-  },
-  meta: {
-    fontSize: 10,
-    color: '#9CA3AF',
-    marginTop: 2,
-  },
-  iconBtn: {
-    padding: 4,
-    borderRadius: 6,
+    fontSize: 15,
+    color: theme.palette.text,
   },
   actionsRow: {
-    marginTop: 4,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'flex-start',
@@ -340,14 +310,26 @@ const styles = StyleSheet.create({
   likeButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: theme.spacing.xs,
   },
   likeCount: {
     fontSize: 13,
     fontWeight: '500',
-    color: '#4B5563',
+    color: theme.palette.textMuted,
   },
-  // Modal styles
+  iconBtn: {
+    padding: theme.spacing.xs,
+    borderRadius: theme.radii.sm,
+  },
+  imageWrapper: {
+    borderRadius: theme.radii.md,
+    overflow: 'hidden',
+    backgroundColor: theme.palette.border,
+  },
+  image: {
+    width: '100%',
+    aspectRatio: 4 / 3,
+  },
   modalRoot: {
     flex: 1,
     backgroundColor: '#000',
@@ -359,7 +341,7 @@ const styles = StyleSheet.create({
     zIndex: 2,
     padding: 8,
     borderRadius: 999,
-    backgroundColor: 'rgba(17, 24, 39, 0.6)', // near-black
+    backgroundColor: 'rgba(17, 24, 39, 0.6)',
   },
   modalBackdrop: {
     flex: 1,

@@ -70,6 +70,7 @@ Profile creation will be handled at signup so the invariant `profiles.id = auth.
 
 - **Likes:** `post_likes` table stores user → post relations. Post cards hydrate like counts and whether the viewer liked each entry so interactions feel instant.
 - **Notifications + Badge:** `notifications.tsx` lists only unread likes (filtered by `lastReadAt`), groups multiple likes on the same post into summaries (“A and B liked your post … [n] people liked…”), and once viewed it calls `markAsRead` so the badge (driven by `NotificationContext`) clears until new likes arrive.
+- **Visual System:** `src/theme` defines shared palette/spacing/typography tokens consumed by `Typography`, `Avatar`, `SkeletonCard`, and updated cards. Expo Haptics + Reanimated power micro interactions (likes/deletes + card entrances) for polish.
 
 
 ### 6. Project Structure (Expo + TS)

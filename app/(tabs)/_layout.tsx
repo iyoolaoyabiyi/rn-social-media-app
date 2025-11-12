@@ -22,7 +22,8 @@ export default function AppTabsLayout() {
   }, [loading, session, router]);
 
   useEffect(() => {
-    if (!session?.user?.id) return;
+    const userId = session?.user?.id;
+    if (!userId) return;
     let cancelled = false;
 
     async function loadNotificationCount() {
@@ -30,7 +31,7 @@ export default function AppTabsLayout() {
       const { count, error } = await supabase
         .from('post_likes')
         .select('id, posts!inner(user_id)', { head: true, count: 'exact' })
-        .eq('posts.user_id', session.user.id)
+        .eq('posts.user_id', userId)
         .gt('created_at', sinceIso);
 
       if (error) {

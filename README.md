@@ -14,6 +14,8 @@ Framez is a cross-platform social posting app built with Expo Router and Supabas
 - Rich post composer with client-side validation, optional image upload to Supabase Storage, and optimistic navigation (`app/(tabs)/create.tsx`).
 - Post interactions (Likes):
   - Tap-to-like controls with optimistic counters and Supabase-backed persistence (`src/lib/likes.ts`, `src/components/PostCard.tsx`).
+- Visual system:
+  - Centralized design tokens/typography + shared Avatar/Skeleton components keep colors, spacing, and loading states consistent (`src/theme`, `src/components/Typography.tsx`, `src/components/SkeletonCard.tsx`, `src/components/Avatar.tsx`). Post cards use haptics/animations for microinteractions.
 - Notification center:
   - Shows only unread likes, groups multiple likes on the same post into human-friendly summaries (e.g., “Alex, Bisi and 3 others…”) with a `[n] people liked your post` cue, and clears the badge as soon as the tab is opened (`app/(tabs)/notifications.tsx`, `app/(tabs)/_layout.tsx`, `src/context/NotificationContext.tsx`).
 - Centralized refresh bus that fan-outs manual/pull-to-refresh events across feed, profiles, and notifications so every surface re-fetches the latest counts (`src/context/RefreshContext.tsx`).

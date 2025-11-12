@@ -1,19 +1,21 @@
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  ActivityIndicator,
   Pressable,
   RefreshControl,
   ScrollView,
-  Text,
-  View,
+  StyleSheet,
+  View
 } from 'react-native';
 import { AppContainer } from '../../src/components/AppContainer';
 import { PostCard } from '../../src/components/PostCard';
+import { SkeletonCard } from '../../src/components/SkeletonCard';
+import { Body, Heading } from '../../src/components/Typography';
 import { useAuth } from '../../src/context/AuthContext';
 import { useRefresh } from '../../src/context/RefreshContext';
 import { fetchLikeMetadata } from '../../src/lib/likes';
 import { supabase } from '../../src/lib/supabase';
+import { theme } from '../../src/theme';
 import type { Post } from '../../src/types';
 
 export default function FeedScreen() {
@@ -134,56 +136,43 @@ export default function FeedScreen() {
   return (
     <AppContainer>
       <ScrollView
-        contentContainerStyle={{ padding: 24, paddingBottom: 40 }}
+        contentContainerStyle={styles.scrollContent}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
         keyboardShouldPersistTaps="handled"
       >
-        <View
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            marginBottom: 12,
-            gap: 12,
-          }}
-        >
-          <Text style={{ fontSize: 20, fontWeight: '600' }}>
-            Global Feed
-          </Text>
+        <View style={styles.headerRow}>
+          <Heading>Global Feed</Heading>
           <Pressable
             onPress={handleManualRefresh}
             disabled={loading || refreshing}
-            style={{
-              paddingHorizontal: 12,
-              paddingVertical: 6,
-              borderRadius: 8,
-              borderWidth: 1,
-              borderColor: '#D1D5DB',
-              opacity: loading || refreshing ? 0.6 : 1,
-            }}
+            style={({ pressed }) => [
+              styles.refreshBtn,
+              (pressed || loading || refreshing) && { opacity: 0.6 },
+            ]}
           >
-            <Text style={{ fontSize: 13, color: '#111827' }}>
-              Refresh
-            </Text>
+            <Body style={styles.refreshLabel}>Refresh</Body>
           </Pressable>
         </View>
 
         {loading && !posts && (
-          <ActivityIndicator style={{ marginTop: 16 }} />
+          <View>
+            <SkeletonCard />
+            <SkeletonCard />
+          </View>
         )}
 
         {error && (
-          <Text style={{ color: 'red', marginBottom: 12 }}>
+          <Body style={{ color: theme.palette.accent, marginBottom: theme.spacing.sm }}>
             {error}
-          </Text>
+          </Body>
         )}
 
         {posts && posts.length === 0 && !loading && !error && (
-          <Text style={{ color: '#6B7280' }}>
+          <Body style={styles.emptyText}>
             No posts yet. Be the first to create one.
-          </Text>
+          </Body>
         )}
 
         {posts &&
@@ -194,3 +183,28 @@ export default function FeedScreen() {
     </AppContainer>
   );
 }
+
+const styles = StyleSheet.create({
+  scrollContent: { padding: theme.spacing.sm, paddingBottom: theme.spacing.xl },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: theme.spacing.md,
+    gap: theme.spacing.md,
+  },
+  refreshBtn: {
+    paddingHorizontal: theme.spacing.sm,
+    paddingVertical: theme.spacing.xs,
+    borderRadius: theme.radii.sm,
+    borderWidth: 1,
+    borderColor: theme.palette.border,
+  },
+  refreshLabel: {
+    fontSize: 13,
+    color: theme.palette.text,
+  },
+  emptyText: {
+    color: theme.palette.textMuted,
+  },
+});
