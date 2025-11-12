@@ -40,23 +40,27 @@
 
 # 3) Create Posts (text / image / both) + Auto-refresh
 
-**C1. Text-only**
+**Po1. Text-only**
 - Create -> “Hello world”.
 - Expect: new post at top without manual refresh.
 
-**C2. Image-only**
+**Po2. Image-only**
 - Create -> pick image, leave text empty.
 - Expect: post appears with image at top.
 
-**C3. Text + image**
+**Po3. Text + image**
 - Create -> text + image.
 - Expect: both render; timestamp sensible.
 
-**C4. Limits & errors**
+**Po4. Limits & errors**
 - Try >500 chars.
 - Expect: client-side validation message; nothing inserted.
 
-**C4. Limits & errors**
+**Po5. Post Image Enlargement**
+- Click on images on posts
+- Expect: image fills screen. Tap, Swipe or Click the X button to close modal
+
+**Po6. Post Deletion**
 - Delete Post
 - Expect: post remove from feeds.
 
@@ -90,7 +94,7 @@
 
 **N2. Tab badge**
 - Before opening Notifications, trigger another like from Account B.
-- The tab bar badge above the bell icon should show the unread count (or `99+`). After opening the tab (once the list loads), the badge should clear automatically because the likes are now marked as read.
+- The tab bar badge above the bell icon should be displayed. After opening the tab (once the list loads), the badge should clear automatically because the likes are now marked as read.
 
 **N3. Unread-only feed**
 - After viewing (and thus clearing) notifications, pull to refresh on the Notifications tab again.
