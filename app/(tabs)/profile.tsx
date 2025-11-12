@@ -77,12 +77,13 @@ export default function ProfileScreen() {
         contentContainerStyle={{ padding: 24, paddingBottom: 40, gap: 16 }}
         keyboardShouldPersistTaps="handled"
       >
-        {profile.avatar_url && (
-          <Image
+        {profile.avatar_url ? 
+        (<Image
             source={{ uri: profile.avatar_url }}
             style={{ width: 80, height: 80, borderRadius: 40 }}
-          />
-        )}
+          />) :
+        <View style={styles.avatarStub} />
+        }
         <Text style={{ fontSize: 22, fontWeight: '600' }}>
           {profile.display_name || profile.username}
         </Text>
@@ -152,5 +153,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#111827',
     alignItems: 'center',
     alignSelf: 'flex-start',
+  },
+  avatarStub: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: '#878c96ff',
   }
 })

@@ -34,6 +34,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
+    paddingTop: 12,
     flexGrow: 1,
     alignItems: 'center',
   },
