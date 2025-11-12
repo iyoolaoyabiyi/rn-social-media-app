@@ -5,6 +5,7 @@ import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   Image,
   Platform,
   Pressable,
@@ -39,7 +40,7 @@ export default function EditProfileScreen() {
       return;
     }
 
-  const result = await ImagePicker.launchImageLibraryAsync({
+    const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
       allowsEditing: true,
       quality: 0.7,
@@ -62,6 +63,14 @@ export default function EditProfileScreen() {
       encoding: FileSystem.EncodingType.Base64,
     });
     return decodeBase64(base64);
+  }
+
+  function deriveAvatarPathFromUrl(url: string | null): string | null {
+    if (!url) return null;
+    // Typical public URL:
+    // https://<proj>.supabase.co/storage/v1/object/public/avatars/<userId>/avatar-123.jpg
+    const m = url.match(/\/storage\/v1\/object\/public\/avatars\/(.+?)(\?|$)/);
+    return m?.[1] ? m[1] : null;
   }
 
   async function uploadAvatar(): Promise<string | null> {
@@ -97,7 +106,7 @@ export default function EditProfileScreen() {
 
       return publicUrl || null;
     } catch (err: any) {
-      console.log('Avatar upload exception:', err.message || err);
+      console.log('Avatar upload exception:', err?.message || err);
       setError('Failed to process avatar image.');
       return null;
     }
@@ -133,8 +142,71 @@ export default function EditProfileScreen() {
     }
 
     setProfileReloadTrigger((prev) => prev + 1);
-
     router.replace('/(tabs)/profile');
+  }
+
+  const confirmDelete = async (): Promise<boolean> => {
+    if (Platform.OS === 'web') {
+      return window.confirm('Remove your avatar? This cannot be undone.');
+    }
+    return new Promise((resolve) => {
+      Alert.alert(
+        'Remove Avatar',
+        'Remove your avatar? This cannot be undone.',
+        [
+          { text: 'Cancel', style: 'cancel', onPress: () => resolve(false) },
+          { text: 'Remove', style: 'destructive', onPress: () => resolve(true) },
+        ]
+      );
+    });
+  };
+
+  async function handleDeleteAvatar() {
+    if (submitting) return;
+    if (!avatarUri && !newAvatarUri) return;
+
+    const ok = await confirmDelete();
+    if (!ok) return;
+
+    try {
+      setSubmitting(true);
+      setError(null);
+
+      // Attempt to remove from storage only if we have an existing stored URL
+      const path = deriveAvatarPathFromUrl(avatarUri);
+      if (path) {
+        const { error: removeErr } = await supabase.storage
+          .from('avatars')
+          .remove([path]);
+        if (removeErr) {
+          // Not fatal; log and continue to null out profile
+          console.log('Avatar storage remove error:', removeErr.message);
+        }
+      }
+
+      // Null avatar in profile
+      const { error: updateErr } = await supabase
+        .from('profiles')
+        .update({
+          avatar_url: null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', profile?.id);
+
+      if (updateErr) {
+        setError(updateErr.message);
+        return;
+      }
+
+      // Clear local state (also discard any newly picked but unsaved avatar)
+      setNewAvatarUri(null);
+      setProfileReloadTrigger((prev) => prev + 1);
+    } catch (err: any) {
+      console.log('Delete avatar exception:', err?.message || err);
+      setError('Failed to remove avatar.');
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (
@@ -169,6 +241,26 @@ export default function EditProfileScreen() {
           )}
         </Pressable>
 
+        {(avatarUri || newAvatarUri) && (
+          <Pressable
+            onPress={handleDeleteAvatar}
+            disabled={submitting}
+            style={{
+              alignSelf: 'flex-start',
+              paddingVertical: 8,
+              paddingHorizontal: 12,
+              borderRadius: 8,
+              borderWidth: 1,
+              borderColor: '#EF4444',
+              opacity: submitting ? 0.7 : 1,
+            }}
+          >
+            <Text style={{ color: '#EF4444', fontWeight: '500' }}>
+              Remove avatar
+            </Text>
+          </Pressable>
+        )}
+
         <TextInput
           placeholder="Display Name (optional)"
           value={displayName}
@@ -181,9 +273,7 @@ export default function EditProfileScreen() {
           }}
         />
 
-        {error && (
-          <Text style={{ color: 'red', fontSize: 14 }}>{error}</Text>
-        )}
+        {error && <Text style={{ color: 'red', fontSize: 14 }}>{error}</Text>}
 
         <Pressable
           onPress={handleSave}
