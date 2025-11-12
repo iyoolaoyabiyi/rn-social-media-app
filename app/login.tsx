@@ -1,4 +1,3 @@
-// app/login.tsx
 import { AppContainer } from '@/src/components/AppContainer';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
@@ -73,6 +72,7 @@ export default function LoginScreen() {
             borderColor: '#ccc',
             padding: 12,
             borderRadius: 8,
+            color: "#000"
           }}
         />
 

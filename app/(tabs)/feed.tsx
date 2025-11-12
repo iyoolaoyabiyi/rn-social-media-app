@@ -29,7 +29,7 @@ export default function FeedScreen() {
         image_url,
         created_at,
         user_id,
-        profiles (
+        profiles:profiles!posts_user_id_fkey (
           username,
           display_name,
           avatar_url

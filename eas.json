@@ -1,0 +1,25 @@
+{
+  "cli": {
+    "version": ">= 12.0.0",
+    "appVersionSource": "local"
+  },
+  "build": {
+    "appetize-apk": {
+      "channel": "preview",
+      "env": {
+        "EXPO_PUBLIC_UPDATE_CHANNEL": "preview"
+      },
+      "android": {
+        "buildType": "apk"
+      },
+      "autoIncrement": true
+    },
+    "production": {
+      "channel": "production",
+      "env": {
+        "EXPO_PUBLIC_UPDATE_CHANNEL": "production"
+      },
+      "autoIncrement": true
+    }
+  }
+}
