@@ -46,6 +46,6 @@ const styles = StyleSheet.create({
     maxWidth: 640,
     alignSelf: 'center',
     paddingHorizontal: theme.spacing.sm,
-    paddingBottom: theme.spacing.sm,
+    paddingBottom: theme.spacing.none,
   },
 });

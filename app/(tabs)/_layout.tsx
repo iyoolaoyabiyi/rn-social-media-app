@@ -2,6 +2,7 @@ import { AppContainer } from '@/src/components/AppContainer';
 import { useNotificationContext } from '@/src/context/NotificationContext';
 import { useRefresh } from '@/src/context/RefreshContext';
 import { supabase } from '@/src/lib/supabase';
+import { theme } from '@/src/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { Tabs, useRouter } from 'expo-router';
 import { useEffect } from 'react';
@@ -10,8 +11,10 @@ import { useAuth } from '../../src/context/AuthContext';
 
 export default function AppTabsLayout() {
   const { session, loading } = useAuth();
-  const { unreadCount, setUnreadCount, lastReadAt } = useNotificationContext();
-  const { refreshToken: notificationsRefreshToken } = useRefresh('notifications');
+  const { unreadCount, setUnreadCount, lastReadAt, hydrated } = useNotificationContext();
+  const { refreshToken: notificationsRefreshToken, triggerRefresh: triggerNotificationsRefresh } =
+    useRefresh('notifications');
+  const { triggerRefresh: triggerPostsRefresh } = useRefresh('posts');
   const router = useRouter();
 
   useEffect(() => {
@@ -22,6 +25,7 @@ export default function AppTabsLayout() {
   }, [loading, session, router]);
 
   useEffect(() => {
+    if (!hydrated) return;
     const userId = session?.user?.id;
     if (!userId) return;
     let cancelled = false;
@@ -54,7 +58,32 @@ export default function AppTabsLayout() {
       cancelled = true;
       clearInterval(interval);
     };
-  }, [session?.user?.id, notificationsRefreshToken, lastReadAt, setUnreadCount]);
+  }, [session?.user?.id, notificationsRefreshToken, lastReadAt, setUnreadCount, hydrated]);
+
+  useEffect(() => {
+    const channel = supabase
+      .channel('post-likes-stream')
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'post_likes' },
+        () => {
+          triggerPostsRefresh();
+          triggerNotificationsRefresh();
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'DELETE', schema: 'public', table: 'post_likes' },
+        () => {
+          triggerPostsRefresh();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      channel.unsubscribe();
+    };
+  }, [triggerPostsRefresh, triggerNotificationsRefresh]);
 
   if (loading || !session) {
     return (
@@ -77,6 +106,10 @@ export default function AppTabsLayout() {
           headerShown: false,
           tabBarActiveTintColor: '#111827',
           tabBarInactiveTintColor: '#9CA3AF',
+          tabBarStyle: {
+            borderRadius: theme.radii.md,
+            marginBottom: theme.spacing.sm,
+          }
         }}
       >
         <Tabs.Screen

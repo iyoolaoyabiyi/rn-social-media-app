@@ -275,11 +275,7 @@ const styles = StyleSheet.create({
     borderRadius: theme.radii.md,
     backgroundColor: theme.palette.surface,
     gap: theme.spacing.sm,
-    shadowColor: '#0f172a22',
-    shadowOpacity: 0.12,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 2,
+    elevation: 3,
   },
   header: {
     flexDirection: 'row',

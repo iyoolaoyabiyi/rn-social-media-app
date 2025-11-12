@@ -37,15 +37,9 @@ export default function NotificationsScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
-  const { refreshToken, triggerRefresh } = useRefresh('notifications');
-  const { lastReadAt, markAsRead } = useNotificationContext();
-  const lastReadAtRef = useRef(lastReadAt);
-  const fetchSinceRef = useRef<Date>(lastReadAt);
+  const { refreshToken } = useRefresh('notifications');
+  const { markAsRead } = useNotificationContext();
   const skipFirstRefresh = useRef(true);
-
-  useEffect(() => {
-    lastReadAtRef.current = lastReadAt;
-  }, [lastReadAt]);
 
   const aggregateRows = (rows: any[]): AggregatedNotification[] => {
     const map = new Map<string, AggregatedNotification>();
@@ -82,7 +76,7 @@ export default function NotificationsScreen() {
   };
 
   const loadNotifications = useCallback(
-    async (isRefresh = false) => {
+    async (markRead = false, isRefresh = false) => {
       if (!profile?.id) return;
 
       if (isRefresh) {
@@ -91,8 +85,6 @@ export default function NotificationsScreen() {
         setLoading(true);
       }
       setError(null);
-
-      const sinceIso = fetchSinceRef.current.toISOString();
 
       const { data, error } = await supabase
         .from('post_likes')
@@ -114,7 +106,6 @@ export default function NotificationsScreen() {
       `
         )
         .eq('posts.user_id', profile.id)
-        .gt('created_at', sinceIso)
         .order('created_at', { ascending: false })
         .limit(80);
 
@@ -125,6 +116,13 @@ export default function NotificationsScreen() {
       } else {
         const aggregated = aggregateRows(data || []);
         setNotifications(aggregated);
+
+        if (markRead) {
+          const latest = aggregated[0]?.latest_like
+            ? new Date(aggregated[0].latest_like)
+            : new Date();
+          markAsRead(latest);
+        }
       }
 
       if (isRefresh) {
@@ -133,24 +131,20 @@ export default function NotificationsScreen() {
         setLoading(false);
       }
     },
-    [profile?.id]
+    [profile?.id, markAsRead]
   );
 
   useFocusEffect(
     useCallback(() => {
       if (!profile?.id) return;
-      fetchSinceRef.current = lastReadAtRef.current;
-      markAsRead();
-      loadNotifications();
-    }, [loadNotifications, markAsRead, profile?.id])
+      loadNotifications(true);
+    }, [loadNotifications, profile?.id])
   );
 
   const onRefresh = useCallback(() => {
-    fetchSinceRef.current = lastReadAtRef.current;
-    markAsRead();
     setRefreshing(true);
-    triggerRefresh();
-  }, [markAsRead, triggerRefresh]);
+    loadNotifications(true, true);
+  }, [loadNotifications]);
 
   useEffect(() => {
     if (skipFirstRefresh.current) {
@@ -162,7 +156,7 @@ export default function NotificationsScreen() {
     setRefreshing(true);
 
     (async () => {
-      await loadNotifications(true);
+      await loadNotifications(false, true);
       if (active) {
         setRefreshing(false);
       }
@@ -195,7 +189,7 @@ export default function NotificationsScreen() {
         <View style={styles.headerRow}>
           <Heading>Notifications</Heading>
           <Pressable
-            onPress={onRefresh}
+            onPress={() => loadNotifications(true, true)}
             disabled={loading || refreshing}
             style={({ pressed }) => [
               styles.refreshBtn,
@@ -203,7 +197,7 @@ export default function NotificationsScreen() {
               (loading || refreshing) && { opacity: 0.6 },
             ]}
           >
-            <Caption style={styles.refreshText}>Refresh</Caption>
+            <Caption style={styles.refreshText}>Mark as read</Caption>
           </Pressable>
         </View>
 
@@ -321,10 +315,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: theme.palette.border,
     backgroundColor: theme.palette.surface,
-    shadowColor: '#0f172a11',
-    shadowOpacity: 0.08,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 4 },
     elevation: 1,
   },
   avatar: {

@@ -1,6 +1,6 @@
-import { memo, useMemo } from 'react';
 import { Image } from 'expo-image';
-import { View, Text, StyleSheet } from 'react-native';
+import { memo, useMemo } from 'react';
+import { StyleSheet, Text, View } from 'react-native';
 import { theme } from '../theme';
 
 type Props = {
