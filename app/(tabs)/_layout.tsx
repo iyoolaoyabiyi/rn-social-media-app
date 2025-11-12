@@ -66,6 +66,19 @@ export default function AppTabsLayout() {
           }}
         />
         <Tabs.Screen
+          name="notifications"
+          options={{
+            title: 'Notifications',
+            tabBarIcon: ({ color, size, focused }) => (
+              <Ionicons
+                name={focused ? 'notifications' : 'notifications-outline'}
+                size={size}
+                color={color}
+              />
+            ),
+          }}
+        />
+        <Tabs.Screen
           name="profile/index"
           options={{
             title: 'Profile',

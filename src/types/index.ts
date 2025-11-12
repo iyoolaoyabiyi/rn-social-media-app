@@ -11,6 +11,8 @@ export type Post = {
   image_url: string | null;
   created_at: string;
   user_id: string;
+  likes_count: number;
+  liked_by_me: boolean;
   author: {
     username: string;
     display_name: string | null;

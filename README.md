@@ -12,6 +12,8 @@ Framez is a cross-platform social posting app built with Expo Router and Supabas
 - Username-first identity model: usernames are public, immutable handles, while emails remain private to the owner.
 - Global feed pulling real-time friendly data from `posts` with author joins (`app/(tabs)/feed.tsx` + `src/components/PostCard.tsx`).
 - Rich post composer with client-side validation, optional image upload to Supabase Storage, and optimistic navigation (`app/(tabs)/create.tsx`).
+- Tap-to-like post interactions with optimistic updates and Supabase-backed counts (`src/lib/likes.ts` + `src/components/PostCard.tsx`).
+- Notifications tab that surfaces recent likes on your posts with actor context (`app/(tabs)/notifications.tsx`).
 - Profile suite:
   - Self profile with private email drawer, edit + logout actions, and user-scoped feed (`app/(tabs)/profile/index.tsx`).
   - Edit profile flow with avatar upload/delete and display-name updates that refresh the auth context (`app/(tabs)/profile/edit.tsx`).
@@ -22,7 +24,7 @@ Framez is a cross-platform social posting app built with Expo Router and Supabas
 ```
 Expo Router (app/*)
    ├─ Auth stack: /login, /register
-   └─ Tabs stack: /(tabs)/{feed,create,profile}
+   └─ Tabs stack: /(tabs)/{feed,create,notifications,profile}
 
 src/
    ├─ context/AuthContext.tsx      # Session, profile cache, auth helpers
@@ -92,6 +94,15 @@ create table if not exists public.posts (
   image_url text,
   created_at timestamptz default now()
 );
+
+-- Post likes (notifications + interaction counts)
+create table if not exists public.post_likes (
+  id uuid primary key default gen_random_uuid(),
+  post_id uuid not null references public.posts(id) on delete cascade,
+  user_id uuid not null references public.profiles(id) on delete cascade,
+  created_at timestamptz default now(),
+  unique (post_id, user_id)
+);
 ```
 
 ### Storage Buckets
@@ -108,6 +119,9 @@ Enable RLS on `profiles` and `posts` and add policies such as:
 2. **Posts**
    - `auth.uid() = user_id` can insert/delete/update.
    - `true` can select to fuel the global feed.
+3. **Post Likes**
+   - `auth.uid() = user_id` can insert/delete its own like rows.
+   - `true` can select to power counts + notifications for post owners.
 
 ### Triggers
 - Create an `auth.users` trigger to auto-insert a profile row on sign-up if you’d rather not rely on `signUp` metadata.

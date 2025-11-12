@@ -2,6 +2,7 @@
 import { AppContainer } from '@/src/components/AppContainer';
 import { ProfileView } from '@/src/components/ProfileView';
 import { useAuth } from '@/src/context/AuthContext';
+import { fetchLikeMetadata } from '@/src/lib/likes';
 import { supabase } from '@/src/lib/supabase';
 import type { Post } from '@/src/types';
 import { useRouter } from 'expo-router';
@@ -34,7 +35,7 @@ export default function ProfileScreen() {
           console.log('Error loading user posts:', error.message);
           setPosts([]);
         } else {
-          const mapped: Post[] = (data || []).map((row: any) => ({
+          const basePosts: Post[] = (data || []).map((row: any) => ({
             id: row.id,
             content: row.content,
             image_url: row.image_url,
@@ -45,7 +46,21 @@ export default function ProfileScreen() {
               display_name: row.profiles?.display_name ?? null,
               avatar_url: row.profiles?.avatar_url ?? null,
             },
+            likes_count: 0,
+            liked_by_me: false,
           }));
+
+          const { counts, likedSet } = await fetchLikeMetadata(
+            basePosts.map((post) => post.id),
+            profile?.id
+          );
+
+          const mapped = basePosts.map((post) => ({
+            ...post,
+            likes_count: counts[post.id] ?? 0,
+            liked_by_me: likedSet.has(post.id),
+          }));
+
           setPosts(mapped);
         }
         setLoadingPosts(false);

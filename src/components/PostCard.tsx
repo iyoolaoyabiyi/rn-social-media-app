@@ -13,6 +13,7 @@ import {
   View,
 } from 'react-native';
 import { useAuth } from '../context/AuthContext';
+import { likePost, unlikePost } from '../lib/likes';
 import { supabase } from '../lib/supabase';
 import type { Post } from '../types';
 
@@ -28,6 +29,9 @@ export function PostCard({ post }: Props) {
   const [isDeleting, setIsDeleting] = useState(false);
   const [visible, setVisible] = useState(true);
   const [showImage, setShowImage] = useState(false);
+  const [likesCount, setLikesCount] = useState<number>(post.likes_count ?? 0);
+  const [likedByMe, setLikedByMe] = useState<boolean>(post.liked_by_me ?? false);
+  const [likeBusy, setLikeBusy] = useState(false);
 
   if (!visible) return null;
 
@@ -93,6 +97,38 @@ export function PostCard({ post }: Props) {
     }
   };
 
+  const handleToggleLike = async () => {
+    if (!profile?.id || likeBusy) return;
+
+    const nextLiked = !likedByMe;
+    const optimisticCount = Math.max(0, likesCount + (nextLiked ? 1 : -1));
+
+    setLikedByMe(nextLiked);
+    setLikesCount(optimisticCount);
+    setLikeBusy(true);
+
+    try {
+      const { error } = nextLiked
+        ? await likePost(post.id, profile.id)
+        : await unlikePost(post.id, profile.id);
+
+      if (error) {
+        throw new Error(error.message);
+      }
+    } catch (err) {
+      // Revert optimistic update on failure
+      setLikedByMe(!nextLiked);
+      setLikesCount((prev) => Math.max(0, prev + (nextLiked ? -1 : 1)));
+      if (Platform.OS === 'web') {
+        alert('Could not update like.');
+      } else {
+        Alert.alert('Error', 'Could not update like.');
+      }
+    } finally {
+      setLikeBusy(false);
+    }
+  };
+
   return (
     <View style={styles.card}>
       <View style={styles.header}>
@@ -153,6 +189,27 @@ export function PostCard({ post }: Props) {
       )}
 
       <Text style={styles.meta}>{timestamp}</Text>
+
+      <View style={styles.actionsRow}>
+        <Pressable
+          onPress={handleToggleLike}
+          disabled={likeBusy || !profile?.id}
+          style={({ pressed }) => [
+            styles.iconBtn,
+            styles.likeButton,
+            (pressed || likeBusy) && { opacity: 0.6 },
+          ]}
+          accessibilityRole="button"
+          accessibilityLabel={likedByMe ? 'Remove like' : 'Like post'}
+        >
+          <Ionicons
+            name={likedByMe ? 'heart' : 'heart-outline'}
+            size={18}
+            color={likedByMe ? '#EF4444' : '#4B5563'}
+          />
+          <Text style={styles.likeCount}>{likesCount}</Text>
+        </Pressable>
+      </View>
 
       {/* Full-screen image modal */}
       <Modal
@@ -268,6 +325,22 @@ const styles = StyleSheet.create({
   iconBtn: {
     padding: 4,
     borderRadius: 6,
+  },
+  actionsRow: {
+    marginTop: 4,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+  },
+  likeButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  likeCount: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: '#4B5563',
   },
   // Modal styles
   modalRoot: {

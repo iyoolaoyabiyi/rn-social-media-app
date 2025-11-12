@@ -1,5 +1,7 @@
 import { AppContainer } from '@/src/components/AppContainer';
 import { PostCard } from '@/src/components/PostCard';
+import { useAuth } from '@/src/context/AuthContext';
+import { fetchLikeMetadata } from '@/src/lib/likes';
 import { supabase } from '@/src/lib/supabase';
 import type { Post } from '@/src/types';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -23,6 +25,7 @@ type ProfileLite = {
 export default function OtherUserProfileScreen() {
   const { username } = useLocalSearchParams<{ username: string }>();
   const router = useRouter();
+  const { profile: viewerProfile } = useAuth();
 
   const [userProfile, setUserProfile] = useState<ProfileLite | null>(null);
   const [posts, setPosts] = useState<Post[] | null>(null);
@@ -88,7 +91,7 @@ export default function OtherUserProfileScreen() {
         setError(postsErr.message);
         setPosts([]);
       } else {
-        const mapped: Post[] = (postsData || []).map((row: any) => ({
+        const basePosts: Post[] = (postsData || []).map((row: any) => ({
           id: row.id,
           content: row.content,
           image_url: row.image_url,
@@ -99,7 +102,21 @@ export default function OtherUserProfileScreen() {
             display_name: row.profiles?.display_name ?? null,
             avatar_url: row.profiles?.avatar_url ?? null,
           },
+          likes_count: 0,
+          liked_by_me: false,
         }));
+
+        const { counts, likedSet } = await fetchLikeMetadata(
+          basePosts.map((post) => post.id),
+          viewerProfile?.id
+        );
+
+        const mapped = basePosts.map((post) => ({
+          ...post,
+          likes_count: counts[post.id] ?? 0,
+          liked_by_me: likedSet.has(post.id),
+        }));
+
         setPosts(mapped);
       }
       setLoadingPosts(false);
@@ -110,7 +127,7 @@ export default function OtherUserProfileScreen() {
     return () => {
       cancelled = true;
     };
-  }, [username]);
+  }, [username, viewerProfile?.id]);
 
   if (loading) {
     return (
