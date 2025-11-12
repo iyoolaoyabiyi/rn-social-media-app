@@ -1,24 +1,29 @@
 import { useFocusEffect } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Pressable,
   RefreshControl,
   ScrollView,
   Text,
+  View,
 } from 'react-native';
 import { AppContainer } from '../../src/components/AppContainer';
 import { PostCard } from '../../src/components/PostCard';
 import { useAuth } from '../../src/context/AuthContext';
+import { useRefresh } from '../../src/context/RefreshContext';
 import { fetchLikeMetadata } from '../../src/lib/likes';
 import { supabase } from '../../src/lib/supabase';
 import type { Post } from '../../src/types';
 
 export default function FeedScreen() {
   const { profile } = useAuth();
+  const { refreshToken, triggerRefresh } = useRefresh('posts');
   const [posts, setPosts] = useState<Post[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const skipFirstRefresh = useRef(true);
 
   const fetchPosts = useCallback(async () => {
     setError(null);
@@ -97,9 +102,34 @@ export default function FeedScreen() {
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    await fetchPosts();
-    setRefreshing(false);
-  }, [fetchPosts]);
+    triggerRefresh();
+  }, [triggerRefresh]);
+
+  const handleManualRefresh = useCallback(() => {
+    setRefreshing(true);
+    triggerRefresh();
+  }, [triggerRefresh]);
+
+  useEffect(() => {
+    if (skipFirstRefresh.current) {
+      skipFirstRefresh.current = false;
+      return;
+    }
+
+    let isMounted = true;
+    setRefreshing(true);
+
+    (async () => {
+      await fetchPosts();
+      if (isMounted) {
+        setRefreshing(false);
+      }
+    })();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [fetchPosts, refreshToken]);
 
   return (
     <AppContainer>
@@ -110,9 +140,35 @@ export default function FeedScreen() {
         }
         keyboardShouldPersistTaps="handled"
       >
-        <Text style={{ fontSize: 20, fontWeight: '600', marginBottom: 16 }}>
-          Global Feed
-        </Text>
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            marginBottom: 12,
+            gap: 12,
+          }}
+        >
+          <Text style={{ fontSize: 20, fontWeight: '600' }}>
+            Global Feed
+          </Text>
+          <Pressable
+            onPress={handleManualRefresh}
+            disabled={loading || refreshing}
+            style={{
+              paddingHorizontal: 12,
+              paddingVertical: 6,
+              borderRadius: 8,
+              borderWidth: 1,
+              borderColor: '#D1D5DB',
+              opacity: loading || refreshing ? 0.6 : 1,
+            }}
+          >
+            <Text style={{ fontSize: 13, color: '#111827' }}>
+              Refresh
+            </Text>
+          </Pressable>
+        </View>
 
         {loading && !posts && (
           <ActivityIndicator style={{ marginTop: 16 }} />

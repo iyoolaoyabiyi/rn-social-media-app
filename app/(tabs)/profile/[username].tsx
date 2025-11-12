@@ -1,14 +1,17 @@
 import { AppContainer } from '@/src/components/AppContainer';
 import { PostCard } from '@/src/components/PostCard';
 import { useAuth } from '@/src/context/AuthContext';
+import { useRefresh } from '@/src/context/RefreshContext';
 import { fetchLikeMetadata } from '@/src/lib/likes';
 import { supabase } from '@/src/lib/supabase';
 import type { Post } from '@/src/types';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Image,
+  Pressable,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -26,36 +29,50 @@ export default function OtherUserProfileScreen() {
   const { username } = useLocalSearchParams<{ username: string }>();
   const router = useRouter();
   const { profile: viewerProfile } = useAuth();
+  const { refreshToken, triggerRefresh } = useRefresh('posts');
 
   const [userProfile, setUserProfile] = useState<ProfileLite | null>(null);
   const [posts, setPosts] = useState<Post[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadingPosts, setLoadingPosts] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const isMounted = useRef(true);
 
   useEffect(() => {
-    if (!username) return;
+    return () => {
+      isMounted.current = false;
+    };
+  }, []);
 
-    let cancelled = false;
+  const loadProfileAndPosts = useCallback(
+    async (isRefresh = false) => {
+      if (!username) return;
 
-    const load = async () => {
-      setLoading(true);
+      if (isRefresh) {
+        setRefreshing(true);
+      } else {
+        setLoading(true);
+      }
       setError(null);
 
-      // 1) Resolve profile by username
       const { data: pData, error: pErr } = await supabase
         .from('profiles')
         .select('id, username, display_name, avatar_url')
         .eq('username', username)
         .single();
 
+      if (!isMounted.current) return;
+
       if (pErr || !pData) {
         setError(pErr?.message || 'User not found.');
+        setUserProfile(null);
+        setPosts([]);
         setLoading(false);
+        setRefreshing(false);
+        setLoadingPosts(false);
         return;
       }
-
-      if (cancelled) return;
 
       const prof: ProfileLite = {
         id: pData.id,
@@ -64,9 +81,10 @@ export default function OtherUserProfileScreen() {
         avatar_url: pData.avatar_url,
       };
       setUserProfile(prof);
-      setLoading(false);
+      if (!isRefresh) {
+        setLoading(false);
+      }
 
-      // 2) Fetch posts by that user
       setLoadingPosts(true);
       const { data: postsData, error: postsErr } = await supabase
         .from('posts')
@@ -86,6 +104,8 @@ export default function OtherUserProfileScreen() {
         )
         .eq('user_id', prof.id)
         .order('created_at', { ascending: false });
+
+      if (!isMounted.current) return;
 
       if (postsErr) {
         setError(postsErr.message);
@@ -111,6 +131,8 @@ export default function OtherUserProfileScreen() {
           viewerProfile?.id
         );
 
+        if (!isMounted.current) return;
+
         const mapped = basePosts.map((post) => ({
           ...post,
           likes_count: counts[post.id] ?? 0,
@@ -119,15 +141,45 @@ export default function OtherUserProfileScreen() {
 
         setPosts(mapped);
       }
-      setLoadingPosts(false);
-    };
 
-    load();
+      setLoadingPosts(false);
+      if (isRefresh) {
+        setRefreshing(false);
+      }
+    },
+    [username, viewerProfile?.id]
+  );
+
+  useEffect(() => {
+    loadProfileAndPosts();
+  }, [loadProfileAndPosts]);
+
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    triggerRefresh();
+  }, [triggerRefresh]);
+
+  const skipFirstRefresh = useRef(true);
+  useEffect(() => {
+    if (skipFirstRefresh.current) {
+      skipFirstRefresh.current = false;
+      return;
+    }
+
+    let active = true;
+    setRefreshing(true);
+
+    (async () => {
+      await loadProfileAndPosts(true);
+      if (active) {
+        setRefreshing(false);
+      }
+    })();
 
     return () => {
-      cancelled = true;
+      active = false;
     };
-  }, [username, viewerProfile?.id]);
+  }, [loadProfileAndPosts, refreshToken]);
 
   if (loading) {
     return (
@@ -156,7 +208,12 @@ export default function OtherUserProfileScreen() {
 
   return (
     <AppContainer>
-      <ScrollView contentContainerStyle={{ padding: 24, paddingBottom: 40, gap: 16 }}>
+        <ScrollView
+          contentContainerStyle={{ padding: 24, paddingBottom: 40, gap: 16 }}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          }
+        >
         {userProfile.avatar_url ? (
           <Image
             source={{ uri: userProfile.avatar_url }}
@@ -172,9 +229,33 @@ export default function OtherUserProfileScreen() {
         <Text style={{ color: '#6B7280' }}>@{userProfile.username}</Text>
 
         <View style={{ marginTop: 16 }}>
-          <Text style={{ fontSize: 16, fontWeight: '600', marginBottom: 8 }}>
-            Posts
-          </Text>
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              marginBottom: 8,
+              gap: 12,
+            }}
+          >
+            <Text style={{ fontSize: 16, fontWeight: '600' }}>
+              Posts
+            </Text>
+            <Pressable
+              onPress={onRefresh}
+              disabled={refreshing || loadingPosts}
+              style={{
+                paddingHorizontal: 10,
+                paddingVertical: 6,
+                borderRadius: 8,
+                borderWidth: 1,
+                borderColor: '#D1D5DB',
+                opacity: refreshing || loadingPosts ? 0.6 : 1,
+              }}
+            >
+              <Text style={{ fontSize: 12, color: '#111827' }}>Refresh</Text>
+            </Pressable>
+          </View>
 
           {loadingPosts && <ActivityIndicator style={{ marginTop: 8 }} />}
 

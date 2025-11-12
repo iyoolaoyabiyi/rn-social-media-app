@@ -12,8 +12,11 @@ Framez is a cross-platform social posting app built with Expo Router and Supabas
 - Username-first identity model: usernames are public, immutable handles, while emails remain private to the owner.
 - Global feed pulling real-time friendly data from `posts` with author joins (`app/(tabs)/feed.tsx` + `src/components/PostCard.tsx`).
 - Rich post composer with client-side validation, optional image upload to Supabase Storage, and optimistic navigation (`app/(tabs)/create.tsx`).
-- Tap-to-like post interactions with optimistic updates and Supabase-backed counts (`src/lib/likes.ts` + `src/components/PostCard.tsx`).
-- Notifications tab that surfaces recent likes on your posts with actor context (`app/(tabs)/notifications.tsx`).
+- Post interactions (Likes):
+  - Tap-to-like controls with optimistic counters and Supabase-backed persistence (`src/lib/likes.ts`, `src/components/PostCard.tsx`).
+- Notification center:
+  - Shows only unread likes, groups multiple likes on the same post into human-friendly summaries (e.g., “Alex, Bisi and 3 others…”) with a `[n] people liked your post` cue, and clears the badge as soon as the tab is opened (`app/(tabs)/notifications.tsx`, `app/(tabs)/_layout.tsx`, `src/context/NotificationContext.tsx`).
+- Centralized refresh bus that fan-outs manual/pull-to-refresh events across feed, profiles, and notifications so every surface re-fetches the latest counts (`src/context/RefreshContext.tsx`).
 - Profile suite:
   - Self profile with private email drawer, edit + logout actions, and user-scoped feed (`app/(tabs)/profile/index.tsx`).
   - Edit profile flow with avatar upload/delete and display-name updates that refresh the auth context (`app/(tabs)/profile/edit.tsx`).
@@ -28,6 +31,7 @@ Expo Router (app/*)
 
 src/
    ├─ context/AuthContext.tsx      # Session, profile cache, auth helpers
+   ├─ context/RefreshContext.tsx   # Centralized fan-out for refresh events
    ├─ lib/supabase.ts             # Supabase client + native session wiring
    ├─ components/{AppContainer,PostCard,ProfileView}
    └─ types/index.ts              # Shared Post + Profile contracts
@@ -131,7 +135,7 @@ Manual happy-path and regression coverage lives in [docs/03-test-flow.md](docs/0
 - **Auth** – sign-up, login, session persistence, wrong-password errors, logout routing.
 - **Profile edits** – edit modal, avatar upload/delete flows, private email visibility.
 - **Posting** – text-only, image-only, mixed media, 500-character validation, owner delete.
-- **Feed** – ordering, rendered author metadata, empty state messaging.
+- **Feed & Refresh** – ordering, rendered author metadata, empty state messaging, plus centralized refresh that updates likes across feed/profile/notifications.
 
 Automated tests are not yet wired; the Test Flow serves as the acceptance suite for staging/demo builds.
 

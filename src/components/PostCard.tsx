@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Alert,
   Image,
@@ -32,6 +32,11 @@ export function PostCard({ post }: Props) {
   const [likesCount, setLikesCount] = useState<number>(post.likes_count ?? 0);
   const [likedByMe, setLikedByMe] = useState<boolean>(post.liked_by_me ?? false);
   const [likeBusy, setLikeBusy] = useState(false);
+
+  useEffect(() => {
+    setLikesCount(post.likes_count ?? 0);
+    setLikedByMe(post.liked_by_me ?? false);
+  }, [post.likes_count, post.liked_by_me]);
 
   if (!visible) return null;
 

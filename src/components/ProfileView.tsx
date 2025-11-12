@@ -1,5 +1,5 @@
 // src/components/ProfileView.tsx
-import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Image, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import type { Post } from '../types';
 import { PostCard } from './PostCard';
 
@@ -18,6 +18,9 @@ type Props = {
   sessionEmail?: string | null;
   onPressEdit?: () => void;
   onPressSignOut?: () => void;
+  onRefresh?: () => void;
+  refreshing?: boolean;
+  onManualRefresh?: () => void;
 };
 
 export function ProfileView({
@@ -28,11 +31,20 @@ export function ProfileView({
   sessionEmail = null,
   onPressEdit,
   onPressSignOut,
+  onRefresh,
+  refreshing = false,
+  onManualRefresh,
 }: Props) {
   return (
     <ScrollView
       contentContainerStyle={{ padding: 24, paddingBottom: 40, gap: 16 }}
       keyboardShouldPersistTaps="handled"
+      refreshControl={
+        onRefresh
+          ? (
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          ) : undefined
+      }
     >
       {profile.avatar_url ? (
         <Image source={{ uri: profile.avatar_url }} style={{ width: 80, height: 80, borderRadius: 40 }} />
@@ -68,9 +80,35 @@ export function ProfileView({
       )}
 
       <View style={{ marginTop: 16 }}>
-        <Text style={{ fontSize: 16, fontWeight: '600', marginBottom: 8 }}>
-          {isSelf ? 'Your posts' : 'Posts'}
-        </Text>
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            marginBottom: 8,
+            gap: 12,
+          }}
+        >
+          <Text style={{ fontSize: 16, fontWeight: '600' }}>
+            {isSelf ? 'Your posts' : 'Posts'}
+          </Text>
+          {onManualRefresh && (
+            <Pressable
+              onPress={onManualRefresh}
+              style={{
+                paddingHorizontal: 10,
+                paddingVertical: 6,
+                borderRadius: 8,
+                borderWidth: 1,
+                borderColor: '#D1D5DB',
+                opacity: refreshing ? 0.6 : 1,
+              }}
+              disabled={refreshing}
+            >
+              <Text style={{ fontSize: 12, color: '#111827' }}>Refresh</Text>
+            </Pressable>
+          )}
+        </View>
 
         {loadingPosts && <ActivityIndicator style={{ marginTop: 8 }} />}
 

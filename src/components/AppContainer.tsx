@@ -41,7 +41,7 @@ const styles = StyleSheet.create({
   inner: {
     flexGrow: 1,
     width: '100%',
-    maxWidth: 480, // adjust if you like
+    maxWidth: 640, // adjust if you like
     alignSelf: 'center',
   },
 });

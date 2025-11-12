@@ -15,6 +15,7 @@
     - RLS-secured endpoints.     
     - Public readable profiles + posts.     
     - Write operations only for authenticated users.
+- **Refresh orchestration:** A `RefreshProvider` context emits scope tokens (`posts`, `notifications`) so that pull-to-refresh or tap-to-refresh actions in any screen fan out to the rest (e.g. when Feed refreshes, profile and notifications re-run their queries and get the new like counts).
 
 ### 2. Navigation Flow
 
@@ -65,8 +66,13 @@ Wired with Expo Router
 Enable RLS and apply minimal, clear policies.
 Profile creation will be handled at signup so the invariant `profiles.id = auth.uid()` always holds.
 
+### 5. Engagement Features
 
-### 5. Project Structure (Expo + TS)
+- **Likes:** `post_likes` table stores user → post relations. Post cards hydrate like counts and whether the viewer liked each entry so interactions feel instant.
+- **Notifications + Badge:** `notifications.tsx` lists only unread likes (filtered by `lastReadAt`), groups multiple likes on the same post into summaries (“A and B liked your post … [n] people liked…”), and once viewed it calls `markAsRead` so the badge (driven by `NotificationContext`) clears until new likes arrive.
+
+
+### 6. Project Structure (Expo + TS)
 
 Planned structure:
 ```
