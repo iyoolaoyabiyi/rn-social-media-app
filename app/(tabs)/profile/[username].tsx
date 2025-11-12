@@ -1,22 +1,13 @@
 import { AppContainer } from '@/src/components/AppContainer';
-import { PostCard } from '@/src/components/PostCard';
+import { ProfileView } from '@/src/components/ProfileView';
 import { useAuth } from '@/src/context/AuthContext';
 import { useRefresh } from '@/src/context/RefreshContext';
 import { fetchLikeMetadata } from '@/src/lib/likes';
 import { supabase } from '@/src/lib/supabase';
 import type { Post } from '@/src/types';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import {
-  ActivityIndicator,
-  Image,
-  Pressable,
-  RefreshControl,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { ActivityIndicator, View } from 'react-native';
 
 type ProfileLite = {
   id: string;
@@ -27,7 +18,6 @@ type ProfileLite = {
 
 export default function OtherUserProfileScreen() {
   const { username } = useLocalSearchParams<{ username: string }>();
-  const router = useRouter();
   const { profile: viewerProfile } = useAuth();
   const { refreshToken, triggerRefresh } = useRefresh('posts');
 
@@ -194,89 +184,37 @@ export default function OtherUserProfileScreen() {
   if (error || !userProfile) {
     return (
       <AppContainer>
-        <ScrollView contentContainerStyle={{ padding: 24 }}>
-          <Text style={{ color: 'red', marginBottom: 12 }}>
-            {error || 'User not found.'}
-          </Text>
-          <Text onPress={() => router.back()} style={{ color: '#2563EB' }}>
-            Go back
-          </Text>
-        </ScrollView>
+        <ProfileView
+          isSelf={false}
+          profile={{
+            id: userProfile?.id ?? '',
+            username: userProfile?.username ?? '',
+            display_name: userProfile?.display_name ?? null,
+            avatar_url: userProfile?.avatar_url ?? null,
+          }}
+          posts={null}
+          loadingPosts={false}
+        />
       </AppContainer>
     );
   }
 
   return (
     <AppContainer>
-        <ScrollView
-          contentContainerStyle={{ padding: 24, paddingBottom: 40, gap: 16 }}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-          }
-        >
-        {userProfile.avatar_url ? (
-          <Image
-            source={{ uri: userProfile.avatar_url }}
-            style={{ width: 80, height: 80, borderRadius: 40 }}
-          />
-        ) : (
-          <View style={styles.avatarStub} />
-        )}
-
-        <Text style={{ fontSize: 22, fontWeight: '600' }}>
-          {userProfile.display_name || userProfile.username}
-        </Text>
-        <Text style={{ color: '#6B7280' }}>@{userProfile.username}</Text>
-
-        <View style={{ marginTop: 16 }}>
-          <View
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              marginBottom: 8,
-              gap: 12,
-            }}
-          >
-            <Text style={{ fontSize: 16, fontWeight: '600' }}>
-              Posts
-            </Text>
-            <Pressable
-              onPress={onRefresh}
-              disabled={refreshing || loadingPosts}
-              style={{
-                paddingHorizontal: 10,
-                paddingVertical: 6,
-                borderRadius: 8,
-                borderWidth: 1,
-                borderColor: '#D1D5DB',
-                opacity: refreshing || loadingPosts ? 0.6 : 1,
-              }}
-            >
-              <Text style={{ fontSize: 12, color: '#111827' }}>Refresh</Text>
-            </Pressable>
-          </View>
-
-          {loadingPosts && <ActivityIndicator style={{ marginTop: 8 }} />}
-
-          {posts && posts.length === 0 && !loadingPosts && (
-            <Text style={{ color: '#6B7280' }}>
-              No posts yet.
-            </Text>
-          )}
-
-          {posts && posts.map((post) => <PostCard key={post.id} post={post} />)}
-        </View>
-      </ScrollView>
+      <ProfileView
+        isSelf={false}
+        profile={{
+          id: userProfile.id,
+          username: userProfile.username,
+          display_name: userProfile.display_name,
+          avatar_url: userProfile.avatar_url,
+        }}
+        posts={posts}
+        loadingPosts={loadingPosts}
+        onRefresh={onRefresh}
+        refreshing={refreshing}
+        onManualRefresh={onRefresh}
+      />
     </AppContainer>
   );
 }
-
-const styles = StyleSheet.create({
-  avatarStub: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: '#E5E7EB',
-  },
-});

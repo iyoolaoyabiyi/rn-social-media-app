@@ -11,12 +11,17 @@ export const palette = {
 };
 
 export const spacing = {
+  none: 0,
   xs: 4,
   sm: 8,
   md: 16,
   lg: 24,
   xl: 32,
 };
+
+export const container = {
+  maxWidth: 680,
+}
 
 export const radii = {
   sm: 6,
@@ -46,6 +51,7 @@ export const theme = {
   spacing,
   radii,
   typography,
+  container
 };
 
 export type Theme = typeof theme;
