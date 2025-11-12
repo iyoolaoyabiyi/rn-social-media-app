@@ -66,7 +66,7 @@ export default function AppTabsLayout() {
           }}
         />
         <Tabs.Screen
-          name="profile"
+          name="profile/index"
           options={{
             title: 'Profile',
             tabBarIcon: ({ color, size, focused }) => (
@@ -79,7 +79,13 @@ export default function AppTabsLayout() {
           }}
         />
         <Tabs.Screen
-          name="edit-profile"
+          name="profile/edit"
+          options={{
+            href: null, 
+          }}
+        />
+        <Tabs.Screen
+          name="profile/[username]"
           options={{
             href: null, 
           }}

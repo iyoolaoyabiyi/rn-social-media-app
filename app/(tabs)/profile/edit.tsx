@@ -12,9 +12,9 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { AppContainer } from '../../src/components/AppContainer';
-import { useAuth } from '../../src/context/AuthContext';
-import { supabase } from '../../src/lib/supabase';
+import { AppContainer } from '../../../src/components/AppContainer';
+import { useAuth } from '../../../src/context/AuthContext';
+import { supabase } from '../../../src/lib/supabase';
 
 export default function EditProfileScreen() {
   const router = useRouter();

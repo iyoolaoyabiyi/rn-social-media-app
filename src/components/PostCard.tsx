@@ -1,10 +1,13 @@
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
   Alert,
   Image,
+  Modal,
   Platform,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   View,
@@ -16,6 +19,7 @@ import type { Post } from '../types';
 type Props = { post: Post };
 
 export function PostCard({ post }: Props) {
+  const router = useRouter();
   const { author } = post;
   const created = new Date(post.created_at);
   const timestamp = created.toLocaleString();
@@ -23,27 +27,34 @@ export function PostCard({ post }: Props) {
   const { profile } = useAuth();
   const [isDeleting, setIsDeleting] = useState(false);
   const [visible, setVisible] = useState(true);
+  const [showImage, setShowImage] = useState(false);
 
   if (!visible) return null;
 
   const isOwner = !!profile?.id && profile.id === post.user_id;
 
+  const openAuthorProfile = () => {
+    if (isOwner) {
+      router.push('/profile');
+      return;
+    }
+    router.push({
+      pathname: '/profile/[username]',
+      params: { username: author.username },
+    });
+  };
+
   const confirmDelete = async (): Promise<boolean> => {
     if (Platform.OS === 'web') {
       return window.confirm('Are you sure you want to delete this post?');
     }
-
     return new Promise((resolve) => {
       Alert.alert(
         'Delete Post',
         'Are you sure you want to delete this post?',
         [
           { text: 'Cancel', style: 'cancel', onPress: () => resolve(false) },
-          {
-            text: 'Delete',
-            style: 'destructive',
-            onPress: () => resolve(true),
-          },
+          { text: 'Delete', style: 'destructive', onPress: () => resolve(true) },
         ]
       );
     });
@@ -51,21 +62,18 @@ export function PostCard({ post }: Props) {
 
   const handleDelete = async () => {
     if (!isOwner || isDeleting) return;
-
     const confirmed = await confirmDelete();
     if (!confirmed) return;
 
     try {
       setIsDeleting(true);
-
       const { error } = await supabase
         .from('posts')
         .delete()
         .eq('id', post.id)
-        .eq('user_id', profile!.id); 
+        .eq('user_id', profile!.id);
 
       if (error) {
-        console.error('Error deleting post:', error.message);
         if (Platform.OS === 'web') {
           alert('Could not delete post.');
         } else {
@@ -73,14 +81,12 @@ export function PostCard({ post }: Props) {
         }
         return;
       }
-
       setVisible(false);
     } catch (err) {
-      console.error('Unexpected error deleting post:', err);
       if (Platform.OS === 'web') {
-        alert('Something went wrong.');
+        alert(`Something went wrong.  ${err}`);
       } else {
-        Alert.alert('Error', 'Something went wrong.');
+        Alert.alert('Error', `Something went wrong.  ${err}`);
       }
     } finally {
       setIsDeleting(false);
@@ -90,7 +96,12 @@ export function PostCard({ post }: Props) {
   return (
     <View style={styles.card}>
       <View style={styles.header}>
-        <View style={styles.headerLeft}>
+        <Pressable
+          onPress={openAuthorProfile}
+          style={styles.headerLeft}
+          accessibilityRole="button"
+          accessibilityLabel={`Open ${author.display_name || author.username}'s profile`}
+        >
           {author.avatar_url ? (
             <Image source={{ uri: author.avatar_url }} style={styles.avatar} />
           ) : (
@@ -102,16 +113,18 @@ export function PostCard({ post }: Props) {
             </Text>
             <Text style={styles.handle}>@{author.username}</Text>
           </View>
-        </View>
+        </Pressable>
 
         {isOwner && (
           <Pressable
             onPress={handleDelete}
             disabled={isDeleting}
             style={({ pressed }) => [
-              styles.deleteButton,
+              styles.iconBtn,
               (pressed || isDeleting) && { opacity: 0.6 },
             ]}
+            accessibilityLabel="Delete post"
+            accessibilityHint="Deletes this post permanently"
           >
             <Ionicons
               name="trash-outline"
@@ -125,14 +138,69 @@ export function PostCard({ post }: Props) {
       <Text style={styles.content}>{post.content}</Text>
 
       {post.image_url && (
-        <Image
-          source={{ uri: post.image_url }}
-          style={styles.image}
-          resizeMode="cover"
-        />
+        <Pressable
+          onPress={() => setShowImage(true)}
+          style={({ pressed }) => [pressed && { opacity: 0.9 }]}
+          accessibilityRole="imagebutton"
+          accessibilityLabel="Open image"
+        >
+          <Image
+            source={{ uri: post.image_url }}
+            style={styles.image}
+            resizeMode="cover"
+          />
+        </Pressable>
       )}
 
       <Text style={styles.meta}>{timestamp}</Text>
+
+      {/* Full-screen image modal */}
+      <Modal
+        visible={showImage}
+        transparent={false}
+        animationType="fade"
+        presentationStyle="fullScreen"
+        statusBarTranslucent
+        onRequestClose={() => setShowImage(false)}
+      >
+        <View style={styles.modalRoot}>
+          {/* Close button */}
+          <Pressable
+            onPress={() => setShowImage(false)}
+            style={({ pressed }) => [
+              styles.closeBtn,
+              pressed && { opacity: 0.8 },
+            ]}
+            accessibilityLabel="Close image"
+          >
+            <Ionicons name="close" size={22} color="#fff" />
+          </Pressable>
+
+          {/* Dark backdrop + centered image with zoom on iOS */}
+          <Pressable
+            style={styles.modalBackdrop}
+            onPress={() => setShowImage(false)}
+          >
+            <ScrollView
+              contentContainerStyle={styles.modalContent}
+              // Pinch-to-zoom works on iOS; ignored elsewhere gracefully
+              minimumZoomScale={1}
+              maximumZoomScale={4}
+              bouncesZoom
+              centerContent
+            >
+              <Image
+                source={{ uri: post.image_url ?? '' }}
+                style={styles.modalImage}
+                resizeMode="contain"
+                // On web, allow right-click save/open in new tab
+                accessible
+                accessibilityLabel="Expanded post image"
+              />
+            </ScrollView>
+          </Pressable>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -156,6 +224,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+    flexShrink: 1,
   },
   avatar: {
     width: 32,
@@ -189,15 +258,42 @@ const styles = StyleSheet.create({
     height: 220,
     borderRadius: 10,
     backgroundColor: '#F3F4F6',
-    objectFit: 'contain',
+    objectFit: 'cover',
   },
   meta: {
     fontSize: 10,
     color: '#9CA3AF',
     marginTop: 2,
   },
-  deleteButton: {
+  iconBtn: {
     padding: 4,
     borderRadius: 6,
+  },
+  // Modal styles
+  modalRoot: {
+    flex: 1,
+    backgroundColor: '#000',
+  },
+  closeBtn: {
+    position: 'absolute',
+    top: 16,
+    right: 16,
+    zIndex: 2,
+    padding: 8,
+    borderRadius: 999,
+    backgroundColor: 'rgba(17, 24, 39, 0.6)', // near-black
+  },
+  modalBackdrop: {
+    flex: 1,
+  },
+  modalContent: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 16,
+  },
+  modalImage: {
+    width: '100%',
+    height: '100%',
   },
 });
