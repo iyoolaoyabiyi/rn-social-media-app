@@ -60,6 +60,7 @@ export default function RegisterScreen() {
 
         <TextInput
           placeholder="Email"
+          placeholderTextColor="#6B7280"
           autoCapitalize="none"
           keyboardType="email-address"
           value={email}
@@ -69,11 +70,13 @@ export default function RegisterScreen() {
             borderColor: '#ccc',
             padding: 12,
             borderRadius: 8,
+            color: '#111827',
           }}
         />
 
         <TextInput
           placeholder="Username (public handle)"
+          placeholderTextColor="#6B7280"
           autoCapitalize="none"
           value={username}
           onChangeText={setUsername}
@@ -82,11 +85,13 @@ export default function RegisterScreen() {
             borderColor: '#ccc',
             padding: 12,
             borderRadius: 8,
+            color: '#111827',
           }}
         />
 
         <TextInput
           placeholder="Display name (optional)"
+          placeholderTextColor="#9CA3AF"
           value={displayName}
           onChangeText={setDisplayName}
           style={{
@@ -94,11 +99,13 @@ export default function RegisterScreen() {
             borderColor: '#ccc',
             padding: 12,
             borderRadius: 8,
+            color: '#111827',
           }}
         />
 
         <TextInput
           placeholder="Password"
+          placeholderTextColor="#6B7280"
           secureTextEntry
           value={password}
           onChangeText={setPassword}
@@ -107,6 +114,7 @@ export default function RegisterScreen() {
             borderColor: '#ccc',
             padding: 12,
             borderRadius: 8,
+            color: '#111827',
           }}
         />
 

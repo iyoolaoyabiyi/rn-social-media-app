@@ -166,6 +166,7 @@ export default function CreatePostScreen() {
 
         <TextInput
           placeholder="Share something..."
+          placeholderTextColor="#6B7280"
           value={content}
           onChangeText={setContent}
           multiline
